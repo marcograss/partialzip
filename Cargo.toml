@@ -1,0 +1,12 @@
+[package]
+name = "partialzip"
+version = "0.1.0"
+authors = ["Marco Grassi <marco.gra@gmail.com>"]
+
+[dependencies]
+clap = "2.32.0"
+url = "1.7.1"
+podio = "0.1.6"
+inflate = "0.4.3"
+curl = { git = 'https://github.com/alexcrichton/curl-rust' }
+zip = { git = 'https://github.com/marcograss/zip-rs'}
