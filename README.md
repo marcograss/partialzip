@@ -1,5 +1,7 @@
 # PartialZip
 
+[![Build Status](https://travis-ci.org/marcograss/partialzip.svg?branch=master)](https://travis-ci.org/marcograss/partialzip)
+
 PartialZip is a very basic rewrite of https://github.com/planetbeing/partial-zip in Rust.
 
 It allows you to download single files from inside online zip archives.
