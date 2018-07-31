@@ -2,7 +2,7 @@ extern crate clap;
 extern crate partialzip;
 
 use clap::{Arg, App, SubCommand};
-use partialzip::{PartialZip};
+use partialzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -11,13 +11,13 @@ use std::path::Path;
 fn list(url: &str) {
     let pz = PartialZip::new(url);
     match pz {
-    	Ok(pz) => {
+        Ok(pz) => {
             let l = pz.list();
             for f in l {
                 println!("{}", f);
             }
-        },
-    	Err(e) => println!("{}", e),
+        }
+        Err(e) => println!("{}", e),
     }
 }
 
@@ -29,7 +29,7 @@ fn download(url: &str, filename: &str, outputfile: &str) {
     }
     let pz = PartialZip::new(url);
     match pz {
-    	Ok(pz) => {
+        Ok(pz) => {
             let content = pz.download(filename);
             match content {
                 Ok(content) => {
@@ -39,16 +39,16 @@ fn download(url: &str, filename: &str, outputfile: &str) {
                             if let Err(write_error) = f.write_all(&content) {
                                 println!("{}", write_error);
                             }
-                        },
+                        }
                         Err(e) => println!("{}", e),
                     }
-                },
+                }
                 Err(e) => println!("{}", e),
             }
-        },
-    	Err(e) => println!("{}", e),
+        }
+        Err(e) => println!("{}", e),
     }
-    
+
 }
 
 fn main() {

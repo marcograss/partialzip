@@ -3,19 +3,23 @@ extern crate curl;
 extern crate podio;
 extern crate inflate;
 extern crate zip;
+extern crate indicatif;
 
 use url::Url;
 use curl::easy::Easy;
 use std::io::Cursor;
 use zip::spec::{HEADER_SIZE, CentralDirectoryEnd};
-use zip::result::{ZipError};
+use zip::result::ZipError;
 use std::convert;
 use std::fmt;
 use podio::{ReadPodExt, LittleEndian};
 use std::io;
 use std::str;
+use std::cmp::min;
 
 use inflate::inflate_bytes;
+
+use indicatif::{ProgressBar, ProgressStyle};
 
 
 #[derive(Debug, Clone)]
@@ -26,50 +30,44 @@ pub struct PartialZip {
 }
 
 #[derive(Debug)]
-pub enum PartialZipError{
-	InvalidUrl,
-	FileNotFound,
-	UnsupportedCompression(u16),
-	ZipRsError(ZipError),
-	GenericError(String),
+pub enum PartialZipError {
+    InvalidUrl,
+    FileNotFound,
+    UnsupportedCompression(u16),
+    ZipRsError(ZipError),
+    GenericError(String),
 }
 
 
-impl convert::From<ZipError> for PartialZipError
-{
-    fn from(err: ZipError) -> PartialZipError
-    {
-    	PartialZipError::ZipRsError(err)
+impl convert::From<ZipError> for PartialZipError {
+    fn from(err: ZipError) -> PartialZipError {
+        PartialZipError::ZipRsError(err)
     }
 }
 
-impl convert::From<io::Error> for PartialZipError
-{
-	fn from(err: io::Error) -> PartialZipError
-    {
-    	PartialZipError::ZipRsError(ZipError::Io(err))
+impl convert::From<io::Error> for PartialZipError {
+    fn from(err: io::Error) -> PartialZipError {
+        PartialZipError::ZipRsError(ZipError::Io(err))
     }
 }
 
-impl convert::From<String> for PartialZipError
-{
-	fn from(err: String) -> PartialZipError
-	{
-		PartialZipError::GenericError(err)
-	}
+impl convert::From<String> for PartialZipError {
+    fn from(err: String) -> PartialZipError {
+        PartialZipError::GenericError(err)
+    }
 }
 
-impl fmt::Display for PartialZipError
-{
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error>
-    {
-    	match self {
-    		PartialZipError::InvalidUrl => fmt.write_str("Invalid URL"),
-    		PartialZipError::FileNotFound => fmt.write_str("File Not Found"),
-    		PartialZipError::UnsupportedCompression(c) => write!(fmt, "{} is a Unsupported Compression", c),
-    		PartialZipError::ZipRsError(err) => fmt.write_str(&*err.detail()),
-    		PartialZipError::GenericError(s) => fmt.write_str(s),
-    	}
+impl fmt::Display for PartialZipError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            PartialZipError::InvalidUrl => fmt.write_str("Invalid URL"),
+            PartialZipError::FileNotFound => fmt.write_str("File Not Found"),
+            PartialZipError::UnsupportedCompression(c) => {
+                write!(fmt, "{} is a Unsupported Compression", c)
+            }
+            PartialZipError::ZipRsError(err) => fmt.write_str(&*err.detail()),
+            PartialZipError::GenericError(s) => fmt.write_str(s),
+        }
     }
 }
 
@@ -168,20 +166,20 @@ impl LocalFile {
 
 
 impl PartialZip {
-	pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
-		if !url_is_valid(url) {
-			return Err(PartialZipError::InvalidUrl)
-		}
-		
-		let mut easy = Easy::new();
-		easy.url(url).unwrap();
-		easy.follow_location(true).unwrap();
-		easy.nobody(true).unwrap();
-		easy.write_function(|data| Ok(data.len())).unwrap();
-		easy.perform().unwrap();
-		let file_size = easy.content_length_download().unwrap() as u64;
+    pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
+        if !url_is_valid(url) {
+            return Err(PartialZipError::InvalidUrl);
+        }
 
-		//get central directory end
+        let mut easy = Easy::new();
+        easy.url(url).unwrap();
+        easy.follow_location(true).unwrap();
+        easy.nobody(true).unwrap();
+        easy.write_function(|data| Ok(data.len())).unwrap();
+        easy.perform().unwrap();
+        let file_size = easy.content_length_download().unwrap() as u64;
+
+        //get central directory end
         let start: u64 = if file_size > (0xffff + HEADER_SIZE) {
             file_size - 0xffff - HEADER_SIZE
         } else {
@@ -195,13 +193,15 @@ impl PartialZip {
 
         let mut cde: Vec<u8> = Vec::new();
         {
-        	let mut transfer = easy.transfer();
-        	transfer.write_function(|data| {
-        	    cde.extend_from_slice(data);
-        	    Ok(data.len())
-        	}).unwrap();
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    cde.extend_from_slice(data);
+                    Ok(data.len())
+                })
+                .unwrap();
 
-        	transfer.perform().unwrap();
+            transfer.perform().unwrap();
         };
 
         let mut cde_cursor = Cursor::new(cde);
@@ -211,8 +211,7 @@ impl PartialZip {
 
         // get central directory
         let start = cde.central_directory_offset;
-        let end = cde.central_directory_offset +
-            cde.central_directory_size - 1;
+        let end = cde.central_directory_offset + cde.central_directory_size - 1;
 
         let range = format!("{}-{}", start, end);
 
@@ -221,13 +220,15 @@ impl PartialZip {
 
         let mut cd: Vec<u8> = Vec::new();
         {
-        	let mut transfer = easy.transfer();
-        	transfer.write_function(|data| {
-        	    cd.extend_from_slice(data);
-        	    Ok(data.len())
-        	}).unwrap();
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    cd.extend_from_slice(data);
+                    Ok(data.len())
+                })
+                .unwrap();
 
-        	transfer.perform().unwrap();
+            transfer.perform().unwrap();
         };
 
         let mut cd_cursor = Cursor::new(cd);
@@ -258,102 +259,131 @@ impl PartialZip {
                 Ok(v) => filein.file_name = Some(String::from(v)),
                 Err(e) => println!("invalid filename {:?}! {:?}", e, cdf),
             };
-            let _ = ReadPodExt::read_exact(&mut cd_cursor, (cdf.len_comment + cdf.len_extra) as usize)
-                .unwrap();
+            let _ =
+                ReadPodExt::read_exact(&mut cd_cursor, (cdf.len_comment + cdf.len_extra) as usize)
+                    .unwrap();
             filein.cdfile = cdf;
             files.push(filein);
         }
 
-		Ok(PartialZip{
-			url: url.to_string(),
-			file_size: file_size,
-			files: files,
-		})
-	}
+        Ok(PartialZip {
+            url: url.to_string(),
+            file_size: file_size,
+            files: files,
+        })
+    }
 
-	pub fn list(&self) -> Vec<String> {
-		self.files.iter().filter_map(|f| f.file_name.clone()).collect()
-	}
+    pub fn list(&self) -> Vec<String> {
+        self.files
+            .iter()
+            .filter_map(|f| f.file_name.clone())
+            .collect()
+    }
 
-	pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-		let f = self.get_file(filename)?;
+    pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
+        let f = self.get_file(filename)?;
 
-		// for now we support only deflate...
-		if f.cdfile.method != 8 {
-			return Err(PartialZipError::UnsupportedCompression(f.cdfile.method));
-		}
+        // for now we support only deflate...
+        if f.cdfile.method != 8 {
+            return Err(PartialZipError::UnsupportedCompression(f.cdfile.method));
+        }
 
-		// Download
-		let mut easy = Easy::new();
-		easy.url(&self.url).unwrap();
-		easy.follow_location(true).unwrap();
-		easy.nobody(true).unwrap();
-		let start = f.cdfile.offset;
-		let end = f.cdfile.offset + 30 - 1;
-		let range = format!("{}-{}", start, end);
-		easy.range(&range).unwrap();
-		easy.get(true).unwrap();
+        // Download
+        let mut easy = Easy::new();
+        easy.url(&self.url).unwrap();
+        easy.follow_location(true).unwrap();
+        easy.nobody(true).unwrap();
+        let start = f.cdfile.offset;
+        let end = f.cdfile.offset + 30 - 1;
+        let range = format!("{}-{}", start, end);
+        easy.range(&range).unwrap();
+        easy.get(true).unwrap();
 
-		let mut v: Vec<u8> = Vec::new();
-		{
-			let mut transfer = easy.transfer();
-        	transfer.write_function(|data| {
-        	    v.extend_from_slice(data);
-        	    Ok(data.len())
-        	}).unwrap();
+        let mut v: Vec<u8> = Vec::new();
+        {
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    v.extend_from_slice(data);
+                    Ok(data.len())
+                })
+                .unwrap();
 
-        	transfer.perform().unwrap();
-		}
-		let mut cursor_lf = Cursor::new(v);
+            transfer.perform().unwrap();
+        }
+        let mut cursor_lf = Cursor::new(v);
 
-		let mut lf = LocalFile::new();
-		lf.signature = cursor_lf.read_u32::<LittleEndian>()?;
-		lf.version_extract = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.flags = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.method = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.mod_time = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.mod_date = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.crc32 = cursor_lf.read_u32::<LittleEndian>()?;
-		lf.compressed_size = cursor_lf.read_u32::<LittleEndian>()?;
-		lf.size = cursor_lf.read_u32::<LittleEndian>()?;
-		lf.len_filename = cursor_lf.read_u16::<LittleEndian>()?;
-		lf.len_extra = cursor_lf.read_u16::<LittleEndian>()?;
+        let mut lf = LocalFile::new();
+        lf.signature = cursor_lf.read_u32::<LittleEndian>()?;
+        lf.version_extract = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.flags = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.method = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.mod_time = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.mod_date = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.crc32 = cursor_lf.read_u32::<LittleEndian>()?;
+        lf.compressed_size = cursor_lf.read_u32::<LittleEndian>()?;
+        lf.size = cursor_lf.read_u32::<LittleEndian>()?;
+        lf.len_filename = cursor_lf.read_u16::<LittleEndian>()?;
+        lf.len_extra = cursor_lf.read_u16::<LittleEndian>()?;
 
-		// println!("{:#?}", lf);
+        // println!("{:#?}", lf);
 
-		let start = f.cdfile.offset + 30 + (lf.len_filename as u32) + (lf.len_extra as u32);
-		let end = start + f.cdfile.compressed_size - 1;
-		let range = format!("{}-{}", start, end);
-		easy.range(&range).unwrap();
+        let start = f.cdfile.offset + 30 + (lf.len_filename as u32) + (lf.len_extra as u32);
+        let end = start + f.cdfile.compressed_size - 1;
+        let range = format!("{}-{}", start, end);
+        easy.range(&range).unwrap();
 
-		let mut fcontent: Vec<u8> = Vec::new();
-		{
-			let mut transfer = easy.transfer();
-        	transfer.write_function(|data| {
-        	    fcontent.extend_from_slice(data);
-        	    Ok(data.len())
-        	}).unwrap();
+        // Progress bar
+        let mut downloaded: u64 = 0;
+        let total_size = (end - start) as u64;
 
-        	transfer.perform().unwrap();
-		}
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] \
+                    [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                )
+                .progress_chars("#>-"),
+        );
 
-		let decoded = inflate_bytes(&fcontent)?;
+        let mut fcontent: Vec<u8> = Vec::new();
+        {
+            let mut transfer = easy.transfer();
+            transfer
+                .write_function(|data| {
+                    fcontent.extend_from_slice(data);
+                    let chunk_len = data.len() as u64;
+                    let new = min(downloaded + chunk_len, total_size);
+                    downloaded = new;
+                    pb.set_position(new);
+                    Ok(data.len())
+                })
+                .unwrap();
 
-		return Ok(decoded);
+            transfer.perform().unwrap();
+
+            pb.finish_with_message("downloaded");
+        }
+
+        let decoded = inflate_bytes(&fcontent)?;
+
+        return Ok(decoded);
 
 
-	}
+    }
 
-	fn get_file(&self, filename: &str) -> Result<FileInZip, PartialZipError> {
-		for f in self.files.iter() {
-			if f.file_name.is_some() {
-				if f.clone().file_name.unwrap() == filename { //how to avoid those clones?
-					return Ok(f.clone())
-				}
-			}
-		}
-		Err(PartialZipError::FileNotFound)
-	}
+    fn get_file(&self, filename: &str) -> Result<FileInZip, PartialZipError> {
+        for f in self.files.iter() {
+            if f.file_name.is_some() {
+                if f.clone().file_name.unwrap() == filename {
+                    //how to avoid those clones?
+                    return Ok(f.clone());
+                }
+            }
+        }
+        Err(PartialZipError::FileNotFound)
+    }
 }
 
 fn url_is_valid(url: &str) -> bool {
@@ -364,4 +394,3 @@ fn url_is_valid(url: &str) -> bool {
     }
     return false;
 }
-

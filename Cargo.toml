@@ -10,3 +10,4 @@ podio = "0.1.6"
 inflate = "0.4.3"
 curl = { git = 'https://github.com/alexcrichton/curl-rust' }
 zip = { git = 'https://github.com/marcograss/zip-rs'}
+indicatif = "0.9.0"
