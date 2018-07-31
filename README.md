@@ -1,6 +1,8 @@
 # PartialZip
 
 [![Build Status](https://travis-ci.org/marcograss/partialzip.svg?branch=master)](https://travis-ci.org/marcograss/partialzip)
+[![Build status](https://ci.appveyor.com/api/projects/status/gi6poi45ds0lr9qi?svg=true)](https://ci.appveyor.com/project/marcograss/partialzip)
+
 
 PartialZip is a very basic rewrite of https://github.com/planetbeing/partial-zip in Rust.
 
