@@ -296,9 +296,12 @@ impl PartialZip {
         let f = self.get_file(filename)?;
 
         // for now we support only deflate...
-        if f.cdfile.method != 8 {
+        println!("f.cdfile.method = {:?}", f.cdfile.method);
+        if f.cdfile.method != 8 && f.cdfile.method != 0 {
             return Err(PartialZipError::UnsupportedCompression(f.cdfile.method));
         }
+
+        let have_to_decompress = f.cdfile.method != 0;
 
         // Download
         let mut easy = Easy::new();
@@ -378,9 +381,12 @@ impl PartialZip {
             pb.finish_with_message("downloaded");
         }
 
-        let decoded = inflate_bytes(&fcontent)?;
-
-        return Ok(decoded);
+        if have_to_decompress {
+            let decoded = inflate_bytes(&fcontent)?;
+            return Ok(decoded);
+        } else {
+            return Ok(fcontent);
+        }
 
 
     }
