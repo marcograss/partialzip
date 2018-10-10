@@ -4,6 +4,7 @@ extern crate podio;
 extern crate inflate;
 extern crate zip;
 extern crate indicatif;
+extern crate bytesize;
 
 use url::Url;
 use curl::easy::Easy;
@@ -20,6 +21,8 @@ use std::cmp::min;
 use inflate::inflate_bytes;
 
 use indicatif::{ProgressBar, ProgressStyle};
+
+use bytesize::ByteSize;
 
 
 #[derive(Debug, Clone)]
@@ -276,7 +279,16 @@ impl PartialZip {
     pub fn list(&self) -> Vec<String> {
         self.files
             .iter()
-            .filter_map(|f| f.file_name.clone())
+            .filter_map(|f|
+                {
+                    let name = f.file_name.clone();
+                    if name.is_none() {
+                        None
+                    } else {
+                        Some(format!("{} - {}", name.unwrap(), ByteSize(f.cdfile.size as u64)))
+                    }
+                }
+            )
             .collect()
     }
 
@@ -376,7 +388,7 @@ impl PartialZip {
     fn get_file(&self, filename: &str) -> Result<FileInZip, PartialZipError> {
         for f in self.files.iter() {
             if f.file_name.is_some() {
-                if f.clone().file_name.unwrap() == filename {
+                if f.file_name.clone().unwrap() == filename {
                     //how to avoid those clones?
                     return Ok(f.clone());
                 }
