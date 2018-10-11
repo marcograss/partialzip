@@ -297,8 +297,8 @@ impl PartialZip {
                         } else {
                             "Unsupported".red().bold()
                         };
-                        Some(format!("{} - {} - Compression Method: {}", name.unwrap(),
-                            ByteSize(f.cdfile.size as u64), supported))
+                        Some(format!("{} - {} - Compression Method: {} {}", name.unwrap(),
+                            ByteSize(f.cdfile.size as u64), f.cdfile.method, supported))
                     }
                 }
             )
