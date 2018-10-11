@@ -1,6 +1,6 @@
 [package]
 name = "partialzip"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Marco Grassi <marco.gra@gmail.com>"]
 
 [dependencies]
@@ -12,3 +12,4 @@ curl = { git = 'https://github.com/alexcrichton/curl-rust' }
 zip = { git = 'https://github.com/marcograss/zip-rs'}
 indicatif = "0.9.0"
 bytesize = "1.0.0"
+colored = "1.6"

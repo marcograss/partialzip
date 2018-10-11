@@ -5,6 +5,7 @@ extern crate inflate;
 extern crate zip;
 extern crate indicatif;
 extern crate bytesize;
+extern crate colored;
 
 use url::Url;
 use curl::easy::Easy;
@@ -23,6 +24,8 @@ use inflate::inflate_bytes;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use bytesize::ByteSize;
+
+use colored::*;
 
 
 #[derive(Debug, Clone)]
@@ -276,6 +279,10 @@ impl PartialZip {
         })
     }
 
+    fn compression_is_supported(&self, method: u16) -> bool {
+        return method == 8 || method == 0
+    }
+
     pub fn list(&self) -> Vec<String> {
         self.files
             .iter()
@@ -285,7 +292,13 @@ impl PartialZip {
                     if name.is_none() {
                         None
                     } else {
-                        Some(format!("{} - {}", name.unwrap(), ByteSize(f.cdfile.size as u64)))
+                        let supported = if self.compression_is_supported(f.cdfile.method) {
+                            "Supported".green().bold()
+                        } else {
+                            "Unsupported".red().bold()
+                        };
+                        Some(format!("{} - {} - Compression Method: {}", name.unwrap(),
+                            ByteSize(f.cdfile.size as u64), supported))
                     }
                 }
             )
@@ -296,8 +309,7 @@ impl PartialZip {
         let f = self.get_file(filename)?;
 
         // for now we support only deflate...
-        println!("f.cdfile.method = {:?}", f.cdfile.method);
-        if f.cdfile.method != 8 && f.cdfile.method != 0 {
+        if !self.compression_is_supported(f.cdfile.method) {
             return Err(PartialZipError::UnsupportedCompression(f.cdfile.method));
         }
 
