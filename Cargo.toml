@@ -1,6 +1,6 @@
 [package]
 name = "partialzip"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Marco Grassi <marco.gra@gmail.com>"]
 
 [dependencies]
