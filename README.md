@@ -8,8 +8,6 @@ PartialZip is a very basic rewrite of https://github.com/planetbeing/partial-zip
 
 It allows you to download single files from inside online zip archives.
 
-For now it supports almost only .IPSW (for iOS firmwares) over http/https URLs.
-
 You are welcome to add more zip types and decompression methods and file sources.
 
 ## How to Use
