@@ -2,7 +2,7 @@ extern crate clap;
 extern crate partialzip;
 
 use clap::{Arg, App, SubCommand};
-use partialzip::PartialZip;
+use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
