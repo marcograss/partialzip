@@ -53,10 +53,10 @@ fn download(url: &str, filename: &str, outputfile: &str) {
 }
 
 fn main() {
-    let matches = App::new("PartialZip")
+    let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
-        .author("marcograss")
-        .about("Download single files from online zip archives")
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .subcommand(
             SubCommand::with_name("list")
                 .about("lists the file inside the zip")
