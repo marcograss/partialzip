@@ -1,30 +1,17 @@
-use curl::easy::Easy;
-use std::io::Cursor;
-use zip::spec::{HEADER_SIZE, CentralDirectoryEnd};
 use zip::result::ZipError;
 use std::convert;
-use std::fmt;
-use podio::{ReadPodExt, LittleEndian};
 use std::io;
-use std::str;
-use std::cmp::min;
-
-use inflate::inflate_bytes;
-
-use indicatif::{ProgressBar, ProgressStyle};
-
+use std::io::Read;
+use std::fmt;
+use curl::easy::Easy;
+use std::io::{Error, ErrorKind};
+use std::io::BufReader;
 use bytesize::ByteSize;
-
 use colored::*;
 
 use super::utils;
 
-#[derive(Debug, Clone)]
-pub struct PartialZip {
-    url: String,
-    file_size: u64,
-    files: Vec<FileInZip>,
-}
+use zip::ZipArchive;
 
 #[derive(Debug)]
 pub enum PartialZipError {
@@ -62,109 +49,71 @@ impl fmt::Display for PartialZipError {
             PartialZipError::UnsupportedCompression(c) => {
                 write!(fmt, "{} is a Unsupported Compression", c)
             }
-            PartialZipError::ZipRsError(err) => fmt.write_str(&*err.detail()),
+            PartialZipError::ZipRsError(err) => fmt.write_str(&*err.to_string()),
             PartialZipError::GenericError(s) => fmt.write_str(s),
         }
     }
 }
 
-#[derive(Debug, Clone)]
-struct CDFile {
-    pub signature: u32,
-    pub version: u16,
-    pub version_extract: u16,
-    pub flags: u16,
-    pub method: u16,
-    pub mod_time: u16,
-    pub mod_date: u16,
-    pub crc32: u32,
-    pub compressed_size: u32,
-    pub size: u32,
-    pub len_filename: u16,
-    pub len_extra: u16,
-    pub len_comment: u16,
-    pub disk_start: u16,
-    pub internal_attr: u16,
-    pub external_attr: u32,
-    pub offset: u32,
+#[derive(Debug)]
+pub struct PartialZip {
+	url: String,
+	archive: ZipArchive<BufReader<PartialReader>>,
 }
-
-impl CDFile {
-    pub fn new() -> CDFile {
-        CDFile {
-            signature: 0,
-            version: 0,
-            version_extract: 0,
-            flags: 0,
-            method: 0,
-            mod_time: 0,
-            mod_date: 0,
-            crc32: 0,
-            compressed_size: 0,
-            size: 0,
-            len_filename: 0,
-            len_extra: 0,
-            len_comment: 0,
-            disk_start: 0,
-            internal_attr: 0,
-            external_attr: 0,
-            offset: 0,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct FileInZip {
-    pub cdfile: CDFile,
-    pub file_name: Option<String>,
-}
-
-impl FileInZip {
-    pub fn new() -> FileInZip {
-        FileInZip {
-            cdfile: CDFile::new(),
-            file_name: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct LocalFile {
-    pub signature: u32,
-    pub version_extract: u16,
-    pub flags: u16,
-    pub method: u16,
-    pub mod_time: u16,
-    pub mod_date: u16,
-    pub crc32: u32,
-    pub compressed_size: u32,
-    pub size: u32,
-    pub len_filename: u16,
-    pub len_extra: u16,
-}
-
-impl LocalFile {
-    pub fn new() -> LocalFile {
-        LocalFile {
-            signature: 0,
-            version_extract: 0,
-            flags: 0,
-            method: 0,
-            mod_time: 0,
-            mod_date: 0,
-            crc32: 0,
-            compressed_size: 0,
-            size: 0,
-            len_filename: 0,
-            len_extra: 0,
-        }
-    }
-}
-
 
 impl PartialZip {
-    pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
-        if !utils::url_is_valid(url) {
+
+	pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
+		let reader = PartialReader::new(url)?;
+		let bufreader = BufReader::new(reader);
+		let archive = ZipArchive::new(bufreader)?;
+		// println!("ZipArchive {:?}", archive);
+		//TODO
+		Ok(PartialZip{
+			url:url.to_string(),
+			archive,
+		})
+	}
+
+	pub fn list(&mut self) -> Vec<String> {
+		let mut retval = Vec::new();
+		for i in 0..self.archive.len() {
+			let file = self.archive.by_index(i).unwrap();
+			let name = file.name();
+			let compressed_size = ByteSize(file.compressed_size());
+			let (compression_method, support) = match file.compression() {
+				zip::CompressionMethod::Stored => ("Stored".to_string(), "Supported".green().bold()),
+				zip::CompressionMethod::Deflated => ("Deflated".to_string(), "Supported".green().bold()),
+				zip::CompressionMethod::Bzip2 => ("Bzip2".to_string(), "Supported".green().bold()),
+				zip::CompressionMethod::Unsupported(n) => (n.to_string(), "Unsupported".red().bold()),
+			};
+			let descr = format!("{} - {} - Compression Method: {} {}", 
+				name, compressed_size, compression_method, support);
+			retval.push(descr);
+		}
+		retval
+	}
+
+	pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
+		let mut file = self.archive.by_name(filename)?;
+		let mut retval = Vec::with_capacity(file.compressed_size() as usize);
+		file.read_to_end(&mut retval)?;
+		Ok(retval)
+	}
+
+}
+
+#[derive(Debug)]
+pub struct PartialReader {
+	url: String,
+	file_size: u64,
+	easy: Easy,
+	pos: u64,
+}
+
+impl PartialReader {
+	pub fn new(url: &str) -> Result<PartialReader, PartialZipError> {
+		if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
         }
 
@@ -175,234 +124,76 @@ impl PartialZip {
         easy.write_function(|data| Ok(data.len())).unwrap();
         easy.perform().unwrap();
         let file_size = easy.content_length_download().unwrap() as u64;
+		Ok(PartialReader{
+			url:url.to_string(),
+			file_size,
+			easy,
+			pos:0,
+		})
 
-        //get central directory end
-        let start: u64 = if file_size > (0xffff + HEADER_SIZE) {
-            file_size - 0xffff - HEADER_SIZE
+	}
+}
+
+impl io::Read for PartialReader {
+	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+		if self.pos >= self.file_size {
+			return Ok(0);
+		}
+		let start = self.pos;
+		let maybe_end = start + (buf.len() as u64) - 1;
+		let end = std::cmp::min(maybe_end, self.file_size-1);
+		let range = format!("{}-{}", start, end);
+		// println!("range {}", range);
+
+		self.easy.range(&range).unwrap();
+        self.easy.get(true).unwrap();
+
+        let mut content: Vec<u8> = Vec::new();
+        {
+            let mut transfer = self.easy.transfer();
+            transfer
+                .write_function(|data| {
+                    content.extend_from_slice(data);
+                    Ok(data.len())
+                })
+                .unwrap();
+
+            transfer.perform().unwrap();
+        };
+
+        let n = io::Read::read(&mut content[..].as_ref(), buf)?;
+        self.pos += n as u64;
+
+		Ok(n)
+	}
+}
+
+impl io::Seek for PartialReader {
+	fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
+
+		let (base_pos, offset) = match style {
+            io::SeekFrom::Start(n) => { self.pos = n; return Ok(n); }
+            io::SeekFrom::End(n) => (self.file_size, n),
+            io::SeekFrom::Current(n) => (self.pos, n),
+        };
+
+        let new_pos = if offset >= 0 {
+            base_pos.checked_add(offset as u64)
         } else {
-            0
+            base_pos.checked_sub((offset.wrapping_neg()) as u64)
         };
-        let end: u64 = file_size - 1;
-        let range = format!("{}-{}", start, end);
-
-        easy.range(&range).unwrap();
-        easy.get(true).unwrap();
-
-        let mut cde: Vec<u8> = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    cde.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
-
-            transfer.perform().unwrap();
-        };
-
-        let mut cde_cursor = Cursor::new(cde);
-
-        let (cde, _) = CentralDirectoryEnd::find_and_parse(&mut cde_cursor)?;
-        // println!("{:?}", cde);
-
-        // get central directory
-        let start = cde.central_directory_offset;
-        let end = cde.central_directory_offset + cde.central_directory_size - 1;
-
-        let range = format!("{}-{}", start, end);
-
-        easy.range(&range).unwrap();
-        easy.get(true).unwrap();
-
-        let mut cd: Vec<u8> = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    cd.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
-
-            transfer.perform().unwrap();
-        };
-
-        let mut cd_cursor = Cursor::new(cd);
-
-        let mut files: Vec<FileInZip> = Vec::new();
-        for _i in 0..cde.number_of_files {
-            let mut filein = FileInZip::new();
-            let mut cdf = CDFile::new();
-            cdf.signature = cd_cursor.read_u32::<LittleEndian>()?;
-            cdf.version = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.version_extract = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.flags = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.method = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.mod_time = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.mod_date = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.crc32 = cd_cursor.read_u32::<LittleEndian>()?;
-            cdf.compressed_size = cd_cursor.read_u32::<LittleEndian>()?;
-            cdf.size = cd_cursor.read_u32::<LittleEndian>()?;
-            cdf.len_filename = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.len_extra = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.len_comment = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.disk_start = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.internal_attr = cd_cursor.read_u16::<LittleEndian>()?;
-            cdf.external_attr = cd_cursor.read_u32::<LittleEndian>()?;
-            cdf.offset = cd_cursor.read_u32::<LittleEndian>()?;
-            let filename = ReadPodExt::read_exact(&mut cd_cursor, cdf.len_filename as usize)?;
-            match str::from_utf8(&filename) {
-                Ok(v) => filein.file_name = Some(String::from(v)),
-                Err(e) => println!("invalid filename {:?}! {:?}", e, cdf),
-            };
-            let _ =
-                ReadPodExt::read_exact(&mut cd_cursor, (cdf.len_comment + cdf.len_extra) as usize)
-                    .unwrap();
-            filein.cdfile = cdf;
-            files.push(filein);
+        match new_pos {
+            Some(n) => {self.pos = n; Ok(self.pos)}
+            None => Err(Error::new(ErrorKind::InvalidInput,
+                           "invalid seek to a negative or overflowing position"))
         }
+	}
 
-        Ok(PartialZip {
-            url: url.to_string(),
-            file_size: file_size,
-            files: files,
-        })
-    }
+	// fn stream_len(&mut self) -> io::Result<u64> {
+ //        Ok(self.file_size)
+ //    }
 
-    fn compression_is_supported(&self, method: u16) -> bool {
-        return method == 8 || method == 0
-    }
-
-    pub fn list(&self) -> Vec<String> {
-        self.files
-            .iter()
-            .filter_map(|f|
-                {
-                    let name = f.file_name.clone();
-                    if name.is_none() {
-                        None
-                    } else {
-                        let supported = if self.compression_is_supported(f.cdfile.method) {
-                            "Supported".green().bold()
-                        } else {
-                            "Unsupported".red().bold()
-                        };
-                        Some(format!("{} - {} - Compression Method: {} {}", name.unwrap(),
-                            ByteSize(f.cdfile.size as u64), f.cdfile.method, supported))
-                    }
-                }
-            )
-            .collect()
-    }
-
-    pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let f = self.get_file(filename)?;
-
-        // for now we support only deflate...
-        if !self.compression_is_supported(f.cdfile.method) {
-            return Err(PartialZipError::UnsupportedCompression(f.cdfile.method));
-        }
-
-        let have_to_decompress = f.cdfile.method != 0;
-
-        // Download
-        let mut easy = Easy::new();
-        easy.url(&self.url).unwrap();
-        easy.follow_location(true).unwrap();
-        easy.nobody(true).unwrap();
-        let start = f.cdfile.offset;
-        let end = f.cdfile.offset + 30 - 1;
-        let range = format!("{}-{}", start, end);
-        easy.range(&range).unwrap();
-        easy.get(true).unwrap();
-
-        let mut v: Vec<u8> = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    v.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
-
-            transfer.perform().unwrap();
-        }
-        let mut cursor_lf = Cursor::new(v);
-
-        let mut lf = LocalFile::new();
-        lf.signature = cursor_lf.read_u32::<LittleEndian>()?;
-        lf.version_extract = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.flags = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.method = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.mod_time = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.mod_date = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.crc32 = cursor_lf.read_u32::<LittleEndian>()?;
-        lf.compressed_size = cursor_lf.read_u32::<LittleEndian>()?;
-        lf.size = cursor_lf.read_u32::<LittleEndian>()?;
-        lf.len_filename = cursor_lf.read_u16::<LittleEndian>()?;
-        lf.len_extra = cursor_lf.read_u16::<LittleEndian>()?;
-
-        // println!("{:#?}", lf);
-
-        let start = f.cdfile.offset + 30 + (lf.len_filename as u32) + (lf.len_extra as u32);
-        let end = start + f.cdfile.compressed_size - 1;
-        let range = format!("{}-{}", start, end);
-        easy.range(&range).unwrap();
-
-        // Progress bar
-        let mut downloaded: u64 = 0;
-        let total_size = (end - start) as u64;
-
-        let pb = ProgressBar::new(total_size);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(
-                    "{spinner:.green} [{elapsed_precise}] \
-                    [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
-                )
-                .progress_chars("#>-"),
-        );
-
-        let mut fcontent: Vec<u8> = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-            transfer
-                .write_function(|data| {
-                    fcontent.extend_from_slice(data);
-                    let chunk_len = data.len() as u64;
-                    let new = min(downloaded + chunk_len, total_size);
-                    downloaded = new;
-                    pb.set_position(new);
-                    Ok(data.len())
-                })
-                .unwrap();
-
-            transfer.perform().unwrap();
-
-            pb.finish_with_message("downloaded");
-        }
-
-        if have_to_decompress {
-            let decoded = inflate_bytes(&fcontent)?;
-            return Ok(decoded);
-        } else {
-            return Ok(fcontent);
-        }
-
-
-    }
-
-    fn get_file(&self, filename: &str) -> Result<FileInZip, PartialZipError> {
-        for f in self.files.iter() {
-            if f.file_name.is_some() {
-                if f.file_name.clone().unwrap() == filename {
-                    //how to avoid those clones?
-                    return Ok(f.clone());
-                }
-            }
-        }
-        Err(PartialZipError::FileNotFound)
-    }
+ //    fn stream_position(&mut self) -> io::Result<u64> {
+ //        Ok(self.pos)
+ //    }
 }

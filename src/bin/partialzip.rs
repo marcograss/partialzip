@@ -11,7 +11,7 @@ use std::path::Path;
 fn list(url: &str) {
     let pz = PartialZip::new(url);
     match pz {
-        Ok(pz) => {
+        Ok(mut pz) => {
             let l = pz.list();
             for f in l {
                 println!("{}", f);
@@ -29,7 +29,7 @@ fn download(url: &str, filename: &str, outputfile: &str) {
     }
     let pz = PartialZip::new(url);
     match pz {
-        Ok(pz) => {
+        Ok(mut pz) => {
             let content = pz.download(filename);
             match content {
                 Ok(content) => {
@@ -38,6 +38,8 @@ fn download(url: &str, filename: &str, outputfile: &str) {
                         Ok(mut f) => {
                             if let Err(write_error) = f.write_all(&content) {
                                 println!("{}", write_error);
+                            } else {
+                                println!("{} extracted to {}", filename, outputfile);
                             }
                         }
                         Err(e) => println!("{}", e),
@@ -48,7 +50,6 @@ fn download(url: &str, filename: &str, outputfile: &str) {
         }
         Err(e) => println!("{}", e),
     }
-
 }
 
 fn main() {
