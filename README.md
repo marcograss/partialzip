@@ -19,7 +19,7 @@ cargo build --release
 # download file
 ./target/release/partialzip download http://yoururl/file.ipsw filename
 # for example for kernelcache:
-./target/release/partialzip download http://yoururl/file.ipsw kernelcache.release.iphone10
+./target/release/partialzip download http://yoururl/file.ipsw kernelcache.release.iphone10 kernelcache.release.iphone10
 ```
 
 ## What is used for
