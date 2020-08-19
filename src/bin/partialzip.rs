@@ -17,14 +17,14 @@ fn list(url: &str) {
                 println!("{}", f);
             }
         }
-        Err(e) => println!("{}", e),
+        Err(e) => eprintln!("{}", e),
     }
 }
 
 
 fn download(url: &str, filename: &str, outputfile: &str) {
     if Path::new(outputfile).exists() {
-        println!("The output file {} already exists", outputfile);
+        eprintln!("The output file {} already exists", outputfile);
         return;
     }
     let pz = PartialZip::new(url);
@@ -37,18 +37,18 @@ fn download(url: &str, filename: &str, outputfile: &str) {
                     match f {
                         Ok(mut f) => {
                             if let Err(write_error) = f.write_all(&content) {
-                                println!("{}", write_error);
+                                eprintln!("{}", write_error);
                             } else {
                                 println!("{} extracted to {}", filename, outputfile);
                             }
                         }
-                        Err(e) => println!("{}", e),
+                        Err(e) => eprintln!("{}", e),
                     }
                 }
-                Err(e) => println!("{}", e),
+                Err(e) => eprintln!("{}", e),
             }
         }
-        Err(e) => println!("{}", e),
+        Err(e) => eprintln!("{}", e),
     }
 }
 
