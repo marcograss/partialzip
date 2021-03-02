@@ -6,6 +6,7 @@ use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use bytesize::ByteSize;
 
 
 fn list(url: &str) {
@@ -14,7 +15,9 @@ fn list(url: &str) {
         Ok(mut pz) => {
             let l = pz.list();
             for f in l {
-                println!("{}", f);
+                let descr = format!("{} - {} - Supported: {}", 
+                    f.name, ByteSize(f.compressed_size), f.supported);
+                println!("{}", descr);
             }
         }
         Err(e) => eprintln!("{}", e),

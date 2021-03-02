@@ -6,8 +6,6 @@ use std::fmt;
 use curl::easy::Easy;
 use std::io::{Error, ErrorKind};
 use std::io::BufReader;
-use bytesize::ByteSize;
-use colored::*;
 
 use super::utils;
 
@@ -61,6 +59,14 @@ pub struct PartialZip {
     archive: ZipArchive<BufReader<PartialReader>>,
 }
 
+#[derive(Debug)]
+pub struct PartialZipFile {
+    pub name: String,
+    pub compressed_size: u64,
+    pub compression_method: zip::CompressionMethod,
+    pub supported: bool
+}
+
 impl PartialZip {
 
     pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
@@ -75,21 +81,23 @@ impl PartialZip {
         })
     }
 
-    pub fn list(&mut self) -> Vec<String> {
+    pub fn list(&mut self) -> Vec<PartialZipFile> {
         let mut retval = Vec::new();
         for i in 0..self.archive.len() {
             let file = self.archive.by_index(i).unwrap();
-            let name = file.name();
-            let compressed_size = ByteSize(file.compressed_size());
-            let (compression_method, support) = match file.compression() {
-                zip::CompressionMethod::Stored => ("Stored".to_string(), "Supported".green().bold()),
-                zip::CompressionMethod::Deflated => ("Deflated".to_string(), "Supported".green().bold()),
-                zip::CompressionMethod::Bzip2 => ("Bzip2".to_string(), "Supported".green().bold()),
-                zip::CompressionMethod::Unsupported(n) => (n.to_string(), "Unsupported".red().bold()),
+            let compression_method = file.compression();
+            let supported = match compression_method {
+                zip::CompressionMethod::Stored | zip::CompressionMethod::Deflated | zip::CompressionMethod::Bzip2 => true,
+                _ => false,
+
             };
-            let descr = format!("{} - {} - Compression Method: {} {}", 
-                name, compressed_size, compression_method, support);
-            retval.push(descr);
+            let p_file = PartialZipFile{
+                name: file.name().to_string(),
+                compressed_size: file.compressed_size(),
+                compression_method: compression_method,
+                supported: supported,
+            };
+            retval.push(p_file);
         }
         retval
     }
