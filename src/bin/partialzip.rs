@@ -8,18 +8,22 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-fn list(url: &str) {
+fn list(url: &str, files_only: bool) {
     let pz = PartialZip::new(url);
     match pz {
         Ok(mut pz) => {
             let l = pz.list();
             for f in l {
-                let descr = format!(
-                    "{} - {} - Supported: {}",
-                    f.name,
-                    ByteSize(f.compressed_size),
-                    f.supported
-                );
+                let descr = if files_only {
+                    f.name
+                } else {
+                    format!(
+                        "{} - {} - Supported: {}",
+                        f.name,
+                        ByteSize(f.compressed_size),
+                        f.supported
+                    )
+                };
                 println!("{}", descr);
             }
         }
@@ -65,7 +69,18 @@ fn main() {
         .subcommand(
             SubCommand::with_name("list")
                 .about("lists the file inside the zip")
-                .arg(Arg::with_name("url").required(true)),
+                .arg(
+                    Arg::with_name("files_only")
+                        .short("f")
+                        .takes_value(false)
+                        .required(false)
+                        .help("list files only, not size and support"),
+                )
+                .arg(
+                    Arg::with_name("url")
+                        .required(true)
+                        .help("url of the zip file"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("download")
@@ -77,7 +92,7 @@ fn main() {
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("list") {
         let url = matches.value_of("url").unwrap();
-        list(url);
+        list(url, matches.is_present("files_only"));
     } else if let Some(matches) = matches.subcommand_matches("download") {
         let url = matches.value_of("url").unwrap();
         let filename = matches.value_of("filename").unwrap();
