@@ -1,13 +1,12 @@
 extern crate clap;
 extern crate partialzip;
 
-use clap::{Arg, App, SubCommand};
+use bytesize::ByteSize;
+use clap::{App, Arg, SubCommand};
 use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use bytesize::ByteSize;
-
 
 fn list(url: &str) {
     let pz = PartialZip::new(url);
@@ -15,15 +14,18 @@ fn list(url: &str) {
         Ok(mut pz) => {
             let l = pz.list();
             for f in l {
-                let descr = format!("{} - {} - Supported: {}", 
-                    f.name, ByteSize(f.compressed_size), f.supported);
+                let descr = format!(
+                    "{} - {} - Supported: {}",
+                    f.name,
+                    ByteSize(f.compressed_size),
+                    f.supported
+                );
                 println!("{}", descr);
             }
         }
         Err(e) => eprintln!("{}", e),
     }
 }
-
 
 fn download(url: &str, filename: &str, outputfile: &str) {
     if Path::new(outputfile).exists() {

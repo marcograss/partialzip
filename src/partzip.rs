@@ -1,11 +1,11 @@
-use zip::result::ZipError;
-use std::convert;
-use std::io;
-use std::io::Read;
-use std::fmt;
 use curl::easy::Easy;
-use std::io::{Error, ErrorKind};
+use std::convert;
+use std::fmt;
+use std::io;
 use std::io::BufReader;
+use std::io::Read;
+use std::io::{Error, ErrorKind};
+use zip::result::ZipError;
 
 use super::utils;
 
@@ -19,7 +19,6 @@ pub enum PartialZipError {
     ZipRsError(ZipError),
     GenericError(String),
 }
-
 
 impl convert::From<ZipError> for PartialZipError {
     fn from(err: ZipError) -> PartialZipError {
@@ -64,19 +63,18 @@ pub struct PartialZipFile {
     pub name: String,
     pub compressed_size: u64,
     pub compression_method: zip::CompressionMethod,
-    pub supported: bool
+    pub supported: bool,
 }
 
 impl PartialZip {
-
     pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
         let reader = PartialReader::new(url)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
         // println!("ZipArchive {:?}", archive);
         //TODO
-        Ok(PartialZip{
-            url:url.to_string(),
+        Ok(PartialZip {
+            url: url.to_string(),
             archive,
         })
     }
@@ -86,16 +84,17 @@ impl PartialZip {
         for i in 0..self.archive.len() {
             let file = self.archive.by_index(i).unwrap();
             let compression_method = file.compression();
-            let supported = match compression_method {
-                zip::CompressionMethod::Stored | zip::CompressionMethod::Deflated | zip::CompressionMethod::Bzip2 => true,
-                _ => false,
-
-            };
-            let p_file = PartialZipFile{
+            let supported = matches!(
+                compression_method,
+                zip::CompressionMethod::Stored
+                    | zip::CompressionMethod::Deflated
+                    | zip::CompressionMethod::Bzip2
+            );
+            let p_file = PartialZipFile {
                 name: file.name().to_string(),
                 compressed_size: file.compressed_size(),
-                compression_method: compression_method,
-                supported: supported,
+                compression_method,
+                supported,
             };
             retval.push(p_file);
         }
@@ -108,7 +107,6 @@ impl PartialZip {
         file.read_to_end(&mut retval)?;
         Ok(retval)
     }
-
 }
 
 #[derive(Debug)]
@@ -132,13 +130,12 @@ impl PartialReader {
         easy.write_function(|data| Ok(data.len())).unwrap();
         easy.perform().unwrap();
         let file_size = easy.content_length_download().unwrap() as u64;
-        Ok(PartialReader{
-            url:url.to_string(),
+        Ok(PartialReader {
+            url: url.to_string(),
             file_size,
             easy,
-            pos:0,
+            pos: 0,
         })
-
     }
 }
 
@@ -149,7 +146,7 @@ impl io::Read for PartialReader {
         }
         let start = self.pos;
         let maybe_end = start + (buf.len() as u64) - 1;
-        let end = std::cmp::min(maybe_end, self.file_size-1);
+        let end = std::cmp::min(maybe_end, self.file_size - 1);
         let range = format!("{}-{}", start, end);
         // println!("range {}", range);
 
@@ -178,9 +175,11 @@ impl io::Read for PartialReader {
 
 impl io::Seek for PartialReader {
     fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
-
         let (base_pos, offset) = match style {
-            io::SeekFrom::Start(n) => { self.pos = n; return Ok(n); }
+            io::SeekFrom::Start(n) => {
+                self.pos = n;
+                return Ok(n);
+            }
             io::SeekFrom::End(n) => (self.file_size, n),
             io::SeekFrom::Current(n) => (self.pos, n),
         };
@@ -191,17 +190,22 @@ impl io::Seek for PartialReader {
             base_pos.checked_sub((offset.wrapping_neg()) as u64)
         };
         match new_pos {
-            Some(n) => {self.pos = n; Ok(self.pos)}
-            None => Err(Error::new(ErrorKind::InvalidInput,
-                           "invalid seek to a negative or overflowing position"))
+            Some(n) => {
+                self.pos = n;
+                Ok(self.pos)
+            }
+            None => Err(Error::new(
+                ErrorKind::InvalidInput,
+                "invalid seek to a negative or overflowing position",
+            )),
         }
     }
 
     // fn stream_len(&mut self) -> io::Result<u64> {
- //        Ok(self.file_size)
- //    }
+    //        Ok(self.file_size)
+    //    }
 
- //    fn stream_position(&mut self) -> io::Result<u64> {
- //        Ok(self.pos)
- //    }
+    //    fn stream_position(&mut self) -> io::Result<u64> {
+    //        Ok(self.pos)
+    //    }
 }

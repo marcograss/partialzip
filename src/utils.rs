@@ -6,5 +6,5 @@ pub fn url_is_valid(url: &str) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
