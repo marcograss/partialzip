@@ -54,8 +54,8 @@ impl fmt::Display for PartialZipError {
 
 #[derive(Debug)]
 pub struct PartialZip {
-    url: String,
-    archive: ZipArchive<BufReader<PartialReader>>,
+    pub url: String,
+    pub archive: ZipArchive<BufReader<PartialReader>>,
 }
 
 #[derive(Debug)]
@@ -111,7 +111,7 @@ impl PartialZip {
 
 #[derive(Debug)]
 pub struct PartialReader {
-    url: String,
+    pub url: String,
     file_size: u64,
     easy: Easy,
     pos: u64,
