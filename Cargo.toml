@@ -3,6 +3,8 @@ name = "partialzip"
 version = "0.6.1"
 authors = ["marcograss"]
 description = "Download single files from online zip archives"
+repository = "https://github.com/marcograss/partialzip"
+license-file = "LICENSE"
 edition = "2021"
 
 [dependencies]
