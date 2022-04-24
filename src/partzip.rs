@@ -11,12 +11,18 @@ use super::utils;
 
 use zip::ZipArchive;
 
+/// Enum for errors thrown by the partialzip crate
 #[derive(Debug)]
 pub enum PartialZipError {
+    /// the URL is invalid
     InvalidUrl,
+    /// The file is not found
     FileNotFound,
+    /// The compression scheme is currently not supported
     UnsupportedCompression(u16),
+    /// Error for the underlying zip crate
     ZipRsError(ZipError),
+    /// Generic catch all string error
     GenericError(String),
 }
 
@@ -52,33 +58,40 @@ impl fmt::Display for PartialZipError {
     }
 }
 
+/// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
 pub struct PartialZip {
+    /// url at which the zip archive resides
     pub url: String,
+    /// The archive itself
     pub archive: ZipArchive<BufReader<PartialReader>>,
 }
 
+/// struct for a file in the zip file with some attributes
 #[derive(Debug)]
 pub struct PartialZipFile {
+    /// filename
     pub name: String,
+    /// size of the file
     pub compressed_size: u64,
+    /// how it has been compressed
     pub compression_method: zip::CompressionMethod,
+    /// is the compression supported or not
     pub supported: bool,
 }
 
 impl PartialZip {
+    /// Create a new PartialZip or return an error
     pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
         let reader = PartialReader::new(url)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
-        // println!("ZipArchive {:?}", archive);
-        //TODO
         Ok(PartialZip {
             url: url.to_string(),
             archive,
         })
     }
-
+    /// Get a list of the files in the archive
     pub fn list(&mut self) -> Vec<PartialZipFile> {
         let mut retval = Vec::new();
         for i in 0..self.archive.len() {
@@ -100,7 +113,7 @@ impl PartialZip {
         }
         retval
     }
-
+    /// Download a single file from the archive, or return an error
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut file = self.archive.by_name(filename)?;
         let mut retval = Vec::with_capacity(file.compressed_size() as usize);
@@ -109,8 +122,10 @@ impl PartialZip {
     }
 }
 
+/// Reader for the partialzip doing only the partial read instead of downloading everything
 #[derive(Debug)]
 pub struct PartialReader {
+    /// url at which we read
     pub url: String,
     file_size: u64,
     easy: Easy,
@@ -118,6 +133,7 @@ pub struct PartialReader {
 }
 
 impl PartialReader {
+    /// Creates a new PartialReader or returns error if failed
     pub fn new(url: &str) -> Result<PartialReader, PartialZipError> {
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
@@ -148,7 +164,6 @@ impl io::Read for PartialReader {
         let maybe_end = start + (buf.len() as u64) - 1;
         let end = std::cmp::min(maybe_end, self.file_size - 1);
         let range = format!("{}-{}", start, end);
-        // println!("range {}", range);
 
         self.easy.range(&range).unwrap();
         self.easy.get(true).unwrap();
@@ -200,12 +215,4 @@ impl io::Seek for PartialReader {
             )),
         }
     }
-
-    // fn stream_len(&mut self) -> io::Result<u64> {
-    //        Ok(self.file_size)
-    //    }
-
-    //    fn stream_position(&mut self) -> io::Result<u64> {
-    //        Ok(self.pos)
-    //    }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "partialzip"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["marcograss"]
 description = "Download single files from online zip archives"
 repository = "https://github.com/marcograss/partialzip"
