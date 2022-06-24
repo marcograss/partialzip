@@ -1,15 +1,15 @@
 [package]
-name = "partialzip"
-version = "0.6.3"
 authors = ["marcograss"]
 description = "Download single files from online zip archives"
-repository = "https://github.com/marcograss/partialzip"
-license-file = "LICENSE"
 edition = "2021"
+license-file = "LICENSE"
+name = "partialzip"
+repository = "https://github.com/marcograss/partialzip"
+version = "0.6.4"
 
 [dependencies]
-clap = "2.33.0"
-url = "2.1.0"
-curl = "0.4.24"
-zip = "0.6.2"
 bytesize = "1.0.0"
+clap = "3.2.6"
+curl = "0.4.24"
+url = "2.1.0"
+zip = "0.6.2"

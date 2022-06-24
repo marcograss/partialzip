@@ -71,7 +71,7 @@ fn main() {
                 .about("lists the file inside the zip")
                 .arg(
                     Arg::with_name("files_only")
-                        .short("f")
+                        .short('f')
                         .takes_value(false)
                         .required(false)
                         .help("list files only, not size and support"),
