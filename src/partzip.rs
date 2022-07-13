@@ -22,6 +22,8 @@ pub enum PartialZipError {
     UnsupportedCompression(u16),
     /// Error for the underlying zip crate
     ZipRsError(ZipError),
+    /// Error for CURL
+    CURLError(curl::Error),
     /// Generic catch all string error
     GenericError(String),
 }
@@ -35,6 +37,12 @@ impl convert::From<ZipError> for PartialZipError {
 impl convert::From<io::Error> for PartialZipError {
     fn from(err: io::Error) -> PartialZipError {
         PartialZipError::ZipRsError(ZipError::Io(err))
+    }
+}
+
+impl convert::From<curl::Error> for PartialZipError {
+    fn from(err: curl::Error) -> PartialZipError {
+        PartialZipError::CURLError(err)
     }
 }
 
@@ -54,6 +62,7 @@ impl fmt::Display for PartialZipError {
             }
             PartialZipError::ZipRsError(err) => fmt.write_str(&*err.to_string()),
             PartialZipError::GenericError(s) => fmt.write_str(s),
+            PartialZipError::CURLError(err) => fmt.write_str(&*err.to_string()),
         }
     }
 }
@@ -140,12 +149,12 @@ impl PartialReader {
         }
 
         let mut easy = Easy::new();
-        easy.url(url).unwrap();
-        easy.follow_location(true).unwrap();
-        easy.nobody(true).unwrap();
-        easy.write_function(|data| Ok(data.len())).unwrap();
-        easy.perform().unwrap();
-        let file_size = easy.content_length_download().unwrap() as u64;
+        easy.url(url)?;
+        easy.follow_location(true)?;
+        easy.nobody(true)?;
+        easy.write_function(|data| Ok(data.len()))?;
+        easy.perform()?;
+        let file_size = easy.content_length_download()? as u64;
         Ok(PartialReader {
             url: url.to_string(),
             file_size,
@@ -165,20 +174,18 @@ impl io::Read for PartialReader {
         let end = std::cmp::min(maybe_end, self.file_size - 1);
         let range = format!("{}-{}", start, end);
 
-        self.easy.range(&range).unwrap();
-        self.easy.get(true).unwrap();
+        self.easy.range(&range)?;
+        self.easy.get(true)?;
 
         let mut content: Vec<u8> = Vec::new();
         {
             let mut transfer = self.easy.transfer();
-            transfer
-                .write_function(|data| {
-                    content.extend_from_slice(data);
-                    Ok(data.len())
-                })
-                .unwrap();
+            transfer.write_function(|data| {
+                content.extend_from_slice(data);
+                Ok(data.len())
+            })?;
 
-            transfer.perform().unwrap();
+            transfer.perform()?;
         };
 
         let n = io::Read::read(&mut content[..].as_ref(), buf)?;
