@@ -1,4 +1,8 @@
 language: rust
+
+arch:
+  - arm64
+
 rust:
   - stable
   - beta
