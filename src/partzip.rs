@@ -90,7 +90,10 @@ pub struct PartialZipFile {
 }
 
 impl PartialZip {
-    /// Create a new PartialZip or return an error
+    /// Create a new `PartialZip`
+    /// # Errors
+    ///
+    /// Will return a `PartialZipError` enum depending on what error happened
     pub fn new(url: &str) -> Result<PartialZip, PartialZipError> {
         let reader = PartialReader::new(url)?;
         let bufreader = BufReader::new(reader);
@@ -101,6 +104,9 @@ impl PartialZip {
         })
     }
     /// Get a list of the files in the archive
+    ///
+    /// # Panics
+    /// It might panic if it's not possible to get a file from the archive
     pub fn list(&mut self) -> Vec<PartialZipFile> {
         let mut retval = Vec::new();
         for i in 0..self.archive.len() {
@@ -122,7 +128,10 @@ impl PartialZip {
         }
         retval
     }
-    /// Download a single file from the archive, or return an error
+    /// Download a single file from the archive
+    ///
+    /// # Errors
+    /// Will return a `PartialZipError` depending on what happened
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut file = self.archive.by_name(filename)?;
         let mut retval = Vec::with_capacity(file.compressed_size() as usize);
@@ -142,7 +151,11 @@ pub struct PartialReader {
 }
 
 impl PartialReader {
-    /// Creates a new PartialReader or returns error if failed
+    /// Creates a new `PartialReader`
+    ///
+    /// # Errors
+    /// Will return a `PartialZipError` enum depending on what happened
+
     pub fn new(url: &str) -> Result<PartialReader, PartialZipError> {
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
