@@ -53,7 +53,7 @@ impl convert::From<String> for PartialZipError {
 }
 
 impl fmt::Display for PartialZipError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             PartialZipError::InvalidUrl => fmt.write_str("Invalid URL"),
             PartialZipError::FileNotFound => fmt.write_str("File Not Found"),
