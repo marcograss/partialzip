@@ -1,4 +1,6 @@
+use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
+use num_traits::ToPrimitive;
 use std::convert;
 use std::fmt;
 use std::io;
@@ -24,6 +26,8 @@ pub enum PartialZipError {
     ZipRsError(ZipError),
     /// Error for CURL
     CURLError(curl::Error),
+    /// Conversion Error
+    ConversionError(NoError),
     /// Generic catch all string error
     GenericError(String),
 }
@@ -52,6 +56,12 @@ impl convert::From<String> for PartialZipError {
     }
 }
 
+impl convert::From<NoError> for PartialZipError {
+    fn from(err: NoError) -> PartialZipError {
+        PartialZipError::ConversionError(err)
+    }
+}
+
 impl fmt::Display for PartialZipError {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
@@ -60,9 +70,10 @@ impl fmt::Display for PartialZipError {
             PartialZipError::UnsupportedCompression(c) => {
                 write!(fmt, "{} is a Unsupported Compression", c)
             }
-            PartialZipError::ZipRsError(err) => fmt.write_str(&*err.to_string()),
+            PartialZipError::ZipRsError(err) => fmt.write_str(&err.to_string()),
             PartialZipError::GenericError(s) => fmt.write_str(s),
-            PartialZipError::CURLError(err) => fmt.write_str(&*err.to_string()),
+            PartialZipError::CURLError(err) => fmt.write_str(&err.to_string()),
+            PartialZipError::ConversionError(err) => fmt.write_str(&err.to_string()),
         }
     }
 }
@@ -134,7 +145,7 @@ impl PartialZip {
     /// Will return a `PartialZipError` depending on what happened
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut file = self.archive.by_name(filename)?;
-        let mut retval = Vec::with_capacity(file.compressed_size() as usize);
+        let mut retval = Vec::with_capacity(usize::value_from(file.compressed_size())?);
         file.read_to_end(&mut retval)?;
         Ok(retval)
     }
@@ -167,7 +178,10 @@ impl PartialReader {
         easy.nobody(true)?;
         easy.write_function(|data| Ok(data.len()))?;
         easy.perform()?;
-        let file_size = easy.content_length_download()? as u64;
+        let file_size = easy
+            .content_length_download()?
+            .to_u64()
+            .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
         Ok(PartialReader {
             url: url.to_string(),
             file_size,
@@ -220,9 +234,15 @@ impl io::Seek for PartialReader {
         };
 
         let new_pos = if offset >= 0 {
-            base_pos.checked_add(offset as u64)
+            base_pos.checked_add(
+                u64::value_from(offset)
+                    .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
+            )
         } else {
-            base_pos.checked_sub((offset.wrapping_neg()) as u64)
+            base_pos.checked_sub(
+                u64::value_from(offset.wrapping_neg())
+                    .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
+            )
         };
         match new_pos {
             Some(n) => {

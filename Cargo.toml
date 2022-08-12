@@ -10,6 +10,8 @@ version = "0.6.5"
 [dependencies]
 bytesize = "1.0.0"
 clap = "3.2.6"
+conv = "0.3.3"
 curl = "0.4.24"
+num-traits = "0.2.15"
 url = "2.1.0"
 zip = "0.6.2"
