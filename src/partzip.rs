@@ -115,27 +115,33 @@ impl PartialZip {
         })
     }
     /// Get a list of the files in the archive
-    ///
-    /// # Panics
-    /// It might panic if it's not possible to get a file from the archive
     pub fn list(&mut self) -> Vec<PartialZipFile> {
         let mut retval = Vec::new();
         for i in 0..self.archive.len() {
-            let file = self.archive.by_index(i).unwrap();
-            let compression_method = file.compression();
-            let supported = matches!(
-                compression_method,
-                zip::CompressionMethod::Stored
-                    | zip::CompressionMethod::Deflated
-                    | zip::CompressionMethod::Bzip2
-            );
-            let p_file = PartialZipFile {
-                name: file.name().to_string(),
-                compressed_size: file.compressed_size(),
-                compression_method,
-                supported,
+            match self.archive.by_index(i) {
+                Ok(file) => {
+                    let compression_method = file.compression();
+                    let supported = matches!(
+                        compression_method,
+                        zip::CompressionMethod::Stored
+                            | zip::CompressionMethod::Deflated
+                            | zip::CompressionMethod::Bzip2
+                            | zip::CompressionMethod::Zstd
+                    );
+                    let p_file = PartialZipFile {
+                        name: file.name().to_string(),
+                        compressed_size: file.compressed_size(),
+                        compression_method,
+                        supported,
+                    };
+                    retval.push(p_file);
+                }
+                Err(_) => {
+                    // We are unable to get a file, let's try to continue,
+                    // and at least return the files we can
+                    continue;
+                }
             };
-            retval.push(p_file);
         }
         retval
     }
@@ -256,3 +262,5 @@ impl io::Seek for PartialReader {
         }
     }
 }
+
+impl std::error::Error for PartialZipError {}

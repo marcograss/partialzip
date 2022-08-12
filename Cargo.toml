@@ -8,6 +8,7 @@ repository = "https://github.com/marcograss/partialzip"
 version = "0.6.5"
 
 [dependencies]
+anyhow = "1.0.61"
 bytesize = "1.0.0"
 clap = "3.2.6"
 conv = "0.3.3"
