@@ -26,8 +26,6 @@ pub enum PartialZipError {
     ZipRsError(ZipError),
     /// Error for CURL
     CURLError(curl::Error),
-    /// Conversion Error
-    ConversionError(NoError),
     /// Generic catch all string error
     GenericError(String),
 }
@@ -58,7 +56,13 @@ impl convert::From<String> for PartialZipError {
 
 impl convert::From<NoError> for PartialZipError {
     fn from(err: NoError) -> PartialZipError {
-        PartialZipError::ConversionError(err)
+        PartialZipError::GenericError(err.to_string())
+    }
+}
+
+impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
+    fn from(err: conv::PosOverflow<u64>) -> PartialZipError {
+        PartialZipError::GenericError(err.to_string())
     }
 }
 
@@ -73,7 +77,6 @@ impl fmt::Display for PartialZipError {
             PartialZipError::ZipRsError(err) => fmt.write_str(&err.to_string()),
             PartialZipError::GenericError(s) => fmt.write_str(s),
             PartialZipError::CURLError(err) => fmt.write_str(&err.to_string()),
-            PartialZipError::ConversionError(err) => fmt.write_str(&err.to_string()),
         }
     }
 }

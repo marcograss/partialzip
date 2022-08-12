@@ -6,6 +6,7 @@ license-file = "LICENSE"
 name = "partialzip"
 repository = "https://github.com/marcograss/partialzip"
 version = "0.6.6"
+exclude = ["/testdata"]
 
 [dependencies]
 anyhow = "1.0.61"
