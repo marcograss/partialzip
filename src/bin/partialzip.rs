@@ -1,6 +1,3 @@
-extern crate clap;
-extern crate partialzip;
-
 use bytesize::ByteSize;
 use clap::{App, Arg, SubCommand};
 use partialzip::partzip::PartialZip;
