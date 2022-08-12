@@ -10,3 +10,5 @@ pub mod commons;
 pub mod partzip;
 /// Small utilities mostly for urls
 pub mod utils;
+
+mod tests;

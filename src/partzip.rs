@@ -88,7 +88,7 @@ pub struct PartialZip {
 }
 
 /// struct for a file in the zip file with some attributes
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PartialZipFile {
     /// filename
     pub name: String,

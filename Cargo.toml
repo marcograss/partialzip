@@ -5,7 +5,7 @@ edition = "2021"
 license-file = "LICENSE"
 name = "partialzip"
 repository = "https://github.com/marcograss/partialzip"
-version = "0.6.5"
+version = "0.6.6"
 
 [dependencies]
 anyhow = "1.0.61"
@@ -16,3 +16,8 @@ curl = "0.4.24"
 num-traits = "0.2.15"
 url = "2.1.0"
 zip = "0.6.2"
+
+[dev-dependencies]
+actix-files = "0.6.2"
+actix-web = "4.1.0"
+tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
