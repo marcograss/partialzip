@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
+/// Handler to list the files from command line
 fn list(url: &str, files_only: bool) -> Result<()> {
     let mut pz = PartialZip::new(url)?;
     let l = pz.list();
@@ -25,6 +26,7 @@ fn list(url: &str, files_only: bool) -> Result<()> {
     Ok(())
 }
 
+/// Handler to download the file from command line
 fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
     if Path::new(outputfile).exists() {
         return Err(anyhow!("The output file {} already exists", outputfile));

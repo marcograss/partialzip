@@ -4,8 +4,6 @@
 //!
 //! It fetches first zip data structures and then download only the
 //! relevant parts of the archive and proceed to decompress it.
-/// Empty module for now
-pub mod commons;
 /// Core module for the partialzip
 pub mod partzip;
 /// Small utilities mostly for urls
