@@ -29,12 +29,12 @@ mod utils_tests {
 #[cfg(test)]
 mod partzip_tests {
     use actix_files as fs;
-    use zip::result::ZipError;
     use std::net::TcpListener;
+    use zip::result::ZipError;
 
     use actix_web::{App, HttpServer};
 
-    use crate::partzip::{PartialZip, PartialZipFile, PartialZipError};
+    use crate::partzip::{PartialZip, PartialZipError, PartialZipFile};
 
     struct TestServer {
         pub address: String,
@@ -108,7 +108,13 @@ mod partzip_tests {
             let mut pz = PartialZip::new(&(test_server.address + "/test.zip"))
                 .expect("cannot create partialzip");
             let downloaded = pz.download("414141.txt");
-            assert!(matches!(downloaded, Err(PartialZipError::ZipRsError(ZipError::FileNotFound))), "didn't throw an error when a file is not in the zip");
+            assert!(
+                matches!(
+                    downloaded,
+                    Err(PartialZipError::ZipRsError(ZipError::FileNotFound))
+                ),
+                "didn't throw an error when a file is not in the zip"
+            );
         })
         .await
         .unwrap();
@@ -120,10 +126,17 @@ mod partzip_tests {
         println!("listening on {}", test_server.address);
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(&(test_server.address + "/invalid.zip"));
-            assert!(matches!(pz, Err(PartialZipError::ZipRsError(ZipError::InvalidArchive("Invalid zip header")))), "didn't throw an error with invalid header");
+            assert!(
+                matches!(
+                    pz,
+                    Err(PartialZipError::ZipRsError(ZipError::InvalidArchive(
+                        "Invalid zip header"
+                    )))
+                ),
+                "didn't throw an error with invalid header"
+            );
         })
         .await
         .unwrap();
     }
-    
 }

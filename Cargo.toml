@@ -15,6 +15,7 @@ clap = "3.2.6"
 conv = "0.3.3"
 curl = "0.4.24"
 num-traits = "0.2.15"
+thiserror = "1.0.32"
 url = "2.1.0"
 zip = "0.6.2"
 

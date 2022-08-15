@@ -2,11 +2,11 @@ use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
 use num_traits::ToPrimitive;
 use std::convert;
-use std::fmt;
 use std::io;
 use std::io::BufReader;
+use std::io::ErrorKind;
 use std::io::Read;
-use std::io::{Error, ErrorKind};
+use thiserror::Error;
 use zip::result::ZipError;
 
 use super::utils;
@@ -14,19 +14,25 @@ use super::utils;
 use zip::ZipArchive;
 
 /// Enum for errors thrown by the partialzip crate
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PartialZipError {
     /// the URL is invalid
+    #[error("Invalid URL")]
     InvalidUrl,
     /// The file is not found
+    #[error("File Not Found")]
     FileNotFound,
     /// The compression scheme is currently not supported
+    #[error("{0} is a Unsupported Compression")]
     UnsupportedCompression(u16),
     /// Error for the underlying zip crate
+    #[error("zip error: {0}")]
     ZipRsError(ZipError),
     /// Error for CURL
+    #[error("CURL error: {0}")]
     CURLError(curl::Error),
     /// Generic catch all string error
+    #[error("{0}")]
     GenericError(String),
 }
 
@@ -63,21 +69,6 @@ impl convert::From<NoError> for PartialZipError {
 impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
     fn from(err: conv::PosOverflow<u64>) -> PartialZipError {
         PartialZipError::GenericError(err.to_string())
-    }
-}
-
-impl fmt::Display for PartialZipError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            PartialZipError::InvalidUrl => fmt.write_str("Invalid URL"),
-            PartialZipError::FileNotFound => fmt.write_str("File Not Found"),
-            PartialZipError::UnsupportedCompression(c) => {
-                write!(fmt, "{} is a Unsupported Compression", c)
-            }
-            PartialZipError::ZipRsError(err) => fmt.write_str(&err.to_string()),
-            PartialZipError::GenericError(s) => fmt.write_str(s),
-            PartialZipError::CURLError(err) => fmt.write_str(&err.to_string()),
-        }
     }
 }
 
@@ -258,12 +249,10 @@ impl io::Seek for PartialReader {
                 self.pos = n;
                 Ok(self.pos)
             }
-            None => Err(Error::new(
+            None => Err(std::io::Error::new(
                 ErrorKind::InvalidInput,
                 "invalid seek to a negative or overflowing position",
             )),
         }
     }
 }
-
-impl std::error::Error for PartialZipError {}
