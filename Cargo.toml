@@ -2,11 +2,18 @@
 authors = ["marcograss"]
 description = "Download single files from online zip archives"
 edition = "2021"
-license-file = "LICENSE"
+license = "MPL-2.0"
 name = "partialzip"
 repository = "https://github.com/marcograss/partialzip"
 version = "0.6.7"
 exclude = ["/testdata"]
+rust-version = "1.57.0"
+documentation = "https://docs.rs/partialzip"
+readme = "README.md"
+homepage = "https://github.com/marcograss/partialzip"
+keywords = ["network", "utility", "io", "tool", "library"]
+categories = ["command-line-utilities", "compression", "encoding", "parsing", "parser-implementations"]
+default-run = "partialzip"
 
 [dependencies]
 anyhow = "1.0.61"
