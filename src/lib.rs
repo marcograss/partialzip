@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+#![warn(missing_docs, missing_debug_implementations)]
 //! `partialzip` is a crate to download or list single files from online zip archives
 //! by saving memory and download times.
 //!
