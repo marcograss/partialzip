@@ -12,6 +12,7 @@ mod utils_tests {
             "asdasd://",
             "js:",
             "smb://storage.test.com",
+            "not parsable URL",
         ];
         for s in ok {
             assert!(crate::utils::url_is_valid(s), "{s} should be a valid url");
@@ -133,6 +134,21 @@ mod partzip_tests {
                     )))
                 ),
                 "didn't throw an error with invalid header"
+            );
+        })
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_invalid_url() {
+        let address = spawn_server().await.address;
+        println!("listening on {address}");
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&("invalid URL"));
+            assert!(
+                matches!(pz, Err(PartialZipError::InvalidUrl)),
+                "didn't throw an error with invalid URL"
             );
         })
         .await
