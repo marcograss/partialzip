@@ -21,7 +21,7 @@ fn list(url: &str, files_only: bool) -> Result<()> {
                 f.supported
             )
         };
-        println!("{}", descr);
+        println!("{descr}");
     }
     Ok(())
 }
@@ -29,13 +29,13 @@ fn list(url: &str, files_only: bool) -> Result<()> {
 /// Handler to download the file from command line
 fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
     if Path::new(outputfile).exists() {
-        return Err(anyhow!("The output file {} already exists", outputfile));
+        return Err(anyhow!("The output file {outputfile} already exists"));
     }
     let mut pz = PartialZip::new(url)?;
     let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
     f.write_all(&content)?;
-    println!("{} extracted to {}", filename, outputfile);
+    println!("{filename} extracted to {outputfile}");
     Ok(())
 }
 

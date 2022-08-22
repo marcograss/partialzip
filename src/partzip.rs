@@ -199,7 +199,7 @@ impl io::Read for PartialReader {
         let start = self.pos;
         let maybe_end = start + (buf.len() as u64) - 1;
         let end = std::cmp::min(maybe_end, self.file_size - 1);
-        let range = format!("{}-{}", start, end);
+        let range = format!("{start}-{end}");
 
         self.easy.range(&range)?;
         self.easy.get(true)?;
