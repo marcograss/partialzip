@@ -107,6 +107,7 @@ mod partzip_tests {
         tokio::task::spawn_blocking(move || {
             let mut pz =
                 PartialZip::new(&(address + "/test.zip")).expect("cannot create partialzip");
+            println!("{:?}", pz);
             let downloaded = pz.download("414141.txt");
             assert!(
                 matches!(
@@ -150,6 +151,9 @@ mod partzip_tests {
                 matches!(pz, Err(PartialZipError::InvalidUrl)),
                 "didn't throw an error with invalid URL"
             );
+            if let Err(e) = pz {
+                println!("{:?}", e);
+            }
         })
         .await
         .unwrap();
