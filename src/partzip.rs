@@ -75,9 +75,9 @@ impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
 /// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
 pub struct PartialZip {
-    /// url at which the zip archive resides
+    /// URL of the the zip archive
     pub url: String,
-    /// The archive itself
+    /// The archive object
     pub archive: ZipArchive<BufReader<PartialReader>>,
 }
 
@@ -86,19 +86,19 @@ pub struct PartialZip {
 pub struct PartialZipFile {
     /// filename
     pub name: String,
-    /// size of the file
+    /// compressed size of the file
     pub compressed_size: u64,
-    /// how it has been compressed
+    /// how it has been compressed (compression method, like bzip2, deflate, etc.)
     pub compression_method: zip::CompressionMethod,
-    /// is the compression supported or not
+    /// is the compression supported or not by this crate
     pub supported: bool,
 }
 
 impl PartialZip {
-    /// Create a new `PartialZip`
+    /// Create a new [`PartialZip`]
     /// # Errors
     ///
-    /// Will return a `PartialZipError` enum depending on what error happened
+    /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new(url: &str) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new(url)?;
         let bufreader = BufReader::new(reader);
@@ -142,7 +142,7 @@ impl PartialZip {
     /// Download a single file from the archive
     ///
     /// # Errors
-    /// Will return a `PartialZipError` depending on what happened
+    /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut file = self.archive.by_name(filename)?;
         let mut retval = Vec::with_capacity(usize::value_from(file.compressed_size())?);
@@ -154,7 +154,7 @@ impl PartialZip {
 /// Reader for the partialzip doing only the partial read instead of downloading everything
 #[derive(Debug)]
 pub struct PartialReader {
-    /// url at which we read
+    /// url at which we read the file
     pub url: String,
     file_size: u64,
     easy: Easy,
@@ -162,10 +162,10 @@ pub struct PartialReader {
 }
 
 impl PartialReader {
-    /// Creates a new `PartialReader`
+    /// Creates a new [`PartialReader`]
     ///
     /// # Errors
-    /// Will return a `PartialZipError` enum depending on what happened
+    /// Will return a [`PartialZipError`] enum depending on what happened
 
     pub fn new(url: &str) -> Result<Self, PartialZipError> {
         if !utils::url_is_valid(url) {
