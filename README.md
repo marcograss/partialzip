@@ -12,6 +12,13 @@ You are welcome to add more zip types and decompression methods and file sources
 
 ## How to Use
 
+### As a command line tool:
+```
+cargo install partialzip
+partialzip list http://yoururl/file.ipsw
+partialzip download http://yoururl/file.ipsw kernelcache.release.iphone10 kernelcache.release.iphone10
+```
+### Or from git sources:
 ```
 cargo build --release
 # listing files
