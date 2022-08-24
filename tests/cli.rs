@@ -16,5 +16,21 @@ fn cli_shows_help() -> Result<(), Box<dyn std::error::Error>> {
         .success()
         .stdout(predicate::str::contains("USAGE"));
 
+    let mut cmd = Command::cargo_bin("partialzip")?;
+
+    cmd.arg("list");
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("partialzip list"));
+
+    let mut cmd = Command::cargo_bin("partialzip")?;
+
+    cmd.arg("download");
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("partialzip download"));
+
     Ok(())
 }
