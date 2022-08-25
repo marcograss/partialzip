@@ -250,18 +250,17 @@ impl io::Read for PartialReader {
         };
 
         let n = io::Read::read(&mut content[..].as_ref(), buf)?;
-        self.pos = self.pos.checked_add(n.to_u64().ok_or_else(||
-            std::io::Error::new(
-                ErrorKind::InvalidData,
-                format!("invalid n {}", n),
-            )
-            
-        )?).ok_or_else(||
-            std::io::Error::new(
-                ErrorKind::InvalidData,
-                format!("adding {} overflow the reader position {}", n, self.pos),
-            )
-        )?;
+        self.pos = self
+            .pos
+            .checked_add(n.to_u64().ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, format!("invalid n {}", n))
+            })?)
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("adding {} overflow the reader position {}", n, self.pos),
+                )
+            })?;
 
         Ok(n)
     }

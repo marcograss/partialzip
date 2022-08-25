@@ -12,8 +12,8 @@ license = "MPL-2.0"
 name = "partialzip"
 readme = "README.md"
 repository = "https://github.com/marcograss/partialzip"
-rust-version = "1.58.1"
-version = "1.0.4"
+rust-version = "1.59.0"
+version = "1.1.0"
 
 [dependencies]
 anyhow = "1.0.61"
