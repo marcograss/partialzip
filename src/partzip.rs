@@ -36,6 +36,7 @@ pub enum PartialZipError {
     GenericError(String),
 }
 
+// Error conversions to our crate type
 impl convert::From<ZipError> for PartialZipError {
     fn from(err: ZipError) -> PartialZipError {
         PartialZipError::ZipRsError(err)
@@ -71,6 +72,7 @@ impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
         PartialZipError::GenericError(err.to_string())
     }
 }
+// end error conversions
 
 /// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
@@ -122,13 +124,12 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    let p_file = PartialZipFile {
+                    retval.push(PartialZipFile {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
                         compression_method,
                         supported,
-                    };
-                    retval.push(p_file);
+                    });
                 }
                 Err(_) => {
                     // We are unable to get a file, let's try to continue,
@@ -197,8 +198,41 @@ impl io::Read for PartialReader {
             return Ok(0);
         }
         let start = self.pos;
-        let maybe_end = start + (buf.len() as u64) - 1;
-        let end = std::cmp::min(maybe_end, self.file_size - 1);
+        let maybe_end = start
+            .checked_add(buf.len().to_u64().ok_or_else(|| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("The buf len is invalid {}", buf.len()),
+                )
+            })?)
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("start + buf len overflow {} {}", start, buf.len()),
+                )
+            })?
+            .checked_sub(1)
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("start + buf len -1 underflow {} {}", start, buf.len()),
+                )
+            })?;
+        let end = std::cmp::min(
+            maybe_end,
+            self.file_size.checked_sub(1).ok_or_else(|| {
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    format!("filesize -1 underflow {}", self.file_size),
+                )
+            })?,
+        );
+        if end < start {
+            return Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                format!("content end < content start {} {}", end, start),
+            ));
+        }
         let range = format!("{start}-{end}");
 
         self.easy.range(&range)?;
@@ -216,7 +250,18 @@ impl io::Read for PartialReader {
         };
 
         let n = io::Read::read(&mut content[..].as_ref(), buf)?;
-        self.pos += n as u64;
+        self.pos = self.pos.checked_add(n.to_u64().ok_or_else(||
+            std::io::Error::new(
+                ErrorKind::InvalidData,
+                format!("invalid n {}", n),
+            )
+            
+        )?).ok_or_else(||
+            std::io::Error::new(
+                ErrorKind::InvalidData,
+                format!("adding {} overflow the reader position {}", n, self.pos),
+            )
+        )?;
 
         Ok(n)
     }
