@@ -46,7 +46,7 @@ fn main() -> Result<()> {
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .subcommand(
             SubCommand::with_name("list")
-                .about("lists the file inside the zip")
+                .about("list the files inside the zip")
                 .arg(
                     Arg::with_name("files_only")
                         .short('f')
@@ -62,7 +62,7 @@ fn main() -> Result<()> {
         )
         .subcommand(
             SubCommand::with_name("download")
-                .about("download a file from the online zip")
+                .about("download a file from the zip")
                 .arg(Arg::with_name("url").required(true).index(1))
                 .arg(Arg::with_name("filename").required(true).index(2))
                 .arg(Arg::with_name("outputfile").required(true).index(3)),
