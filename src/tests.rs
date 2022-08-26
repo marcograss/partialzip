@@ -159,12 +159,13 @@ mod partzip_tests {
         .unwrap();
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_file_protocol() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
         let mut pz = PartialZip::new(&format!("file://localhost{}", d.display())).expect(&format!(
-            "cannot create partialzip for file:/{}",
+            "cannot create partialzip for file://localhost{}",
             d.display()
         ));
         let list = pz.list();
