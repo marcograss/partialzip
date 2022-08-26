@@ -223,7 +223,7 @@ impl io::Read for PartialReader {
             self.file_size.checked_sub(1).ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
-                    format!("filesize -1 underflow {}", self.file_size),
+                    format!("filesize - 1 underflow {}", self.file_size),
                 )
             })?,
         );

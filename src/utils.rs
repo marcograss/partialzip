@@ -4,7 +4,7 @@ use url::Url;
 #[must_use]
 pub fn url_is_valid(url: &str) -> bool {
     match Url::parse(url) {
-        Ok(url) => ["http", "https", "ftp"].contains(&url.scheme()),
+        Ok(url) => ["http", "https", "ftp", "file"].contains(&url.scheme()),
         Err(_) => false,
     }
 }

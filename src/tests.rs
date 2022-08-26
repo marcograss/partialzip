@@ -6,9 +6,9 @@ mod utils_tests {
             "http://www.test.com",
             "https://sub.test.com",
             "ftp://ftp.test.com",
+            "file://localhost/home/test/1.zip",
         ];
         let not_ok = [
-            "file://repo.test.com",
             "asdasd://",
             "js:",
             "smb://storage.test.com",
@@ -29,7 +29,7 @@ mod utils_tests {
 #[cfg(test)]
 mod partzip_tests {
     use actix_files as fs;
-    use std::net::TcpListener;
+    use std::{net::TcpListener, path::PathBuf};
     use zip::result::ZipError;
 
     use actix_web::{App, HttpServer};
@@ -157,5 +157,33 @@ mod partzip_tests {
         })
         .await
         .unwrap();
+    }
+
+    #[test]
+    fn test_file_protocol() {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("testdata/test.zip");
+        let mut pz = PartialZip::new(&format!("file://localhost{}", d.display())).expect(&format!(
+            "cannot create partialzip for file:/{}",
+            d.display()
+        ));
+        let list = pz.list();
+        assert_eq!(
+            list,
+            vec![
+                PartialZipFile {
+                    name: "1.txt".to_string(),
+                    compressed_size: 7,
+                    compression_method: zip::CompressionMethod::Deflated,
+                    supported: true
+                },
+                PartialZipFile {
+                    name: "2.txt".to_string(),
+                    compressed_size: 7,
+                    compression_method: zip::CompressionMethod::Deflated,
+                    supported: true
+                }
+            ]
+        );
     }
 }
