@@ -112,7 +112,7 @@ impl PartialZip {
     }
     /// Get a list of the files in the archive
     pub fn list(&mut self) -> Vec<PartialZipFile> {
-        let mut retval = Vec::new();
+        let mut file_list = Vec::new();
         for i in 0..self.archive.len() {
             match self.archive.by_index(i) {
                 Ok(file) => {
@@ -124,7 +124,7 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    retval.push(PartialZipFile {
+                    file_list.push(PartialZipFile {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
                         compression_method,
@@ -138,7 +138,7 @@ impl PartialZip {
                 }
             };
         }
-        retval
+        file_list
     }
     /// Download a single file from the archive
     ///
@@ -146,9 +146,9 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut file = self.archive.by_name(filename)?;
-        let mut retval = Vec::with_capacity(usize::value_from(file.compressed_size())?);
-        file.read_to_end(&mut retval)?;
-        Ok(retval)
+        let mut content = Vec::with_capacity(usize::value_from(file.compressed_size())?);
+        file.read_to_end(&mut content)?;
+        Ok(content)
     }
 }
 
