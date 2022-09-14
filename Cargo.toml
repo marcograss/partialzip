@@ -13,22 +13,22 @@ name = "partialzip"
 readme = "README.md"
 repository = "https://github.com/marcograss/partialzip"
 rust-version = "1.59.0"
-version = "1.1.1"
+version = "1.1.2"
 
 [dependencies]
-anyhow = "1.0.61"
-bytesize = "1.0.0"
-clap = "3.2.6"
+anyhow = "1.0.65"
+bytesize = "1.1.0"
+clap = "3.2.21"
 conv = "0.3.3"
-curl = "0.4.24"
+curl = "0.4.44"
 num-traits = "0.2.15"
-thiserror = "1.0.32"
-url = "2.1.0"
+thiserror = "1.0.35"
+url = "2.3.1"
 zip = "0.6.2"
 
 [dev-dependencies]
 actix-files = "0.6.2"
-actix-web = "4.1.0"
+actix-web = {version = "4.2.1", default-features = false, features = []}
 assert_cmd = "2.0.4"
 predicates = "2.1.1"
-tokio = {version = "1.20.1", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "1.21.1", features = ["macros", "rt-multi-thread"]}
