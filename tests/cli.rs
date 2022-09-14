@@ -1,9 +1,10 @@
+use anyhow::Result;
 use assert_cmd::prelude::*;
 use predicates::prelude::*;
 use std::process::Command;
 
 #[test]
-fn cli_shows_help() -> Result<(), Box<dyn std::error::Error>> {
+fn cli_flags_work() -> Result<()> {
     let mut cmd = Command::cargo_bin("partialzip")?;
 
     cmd.assert()
