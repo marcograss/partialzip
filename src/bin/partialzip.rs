@@ -69,13 +69,16 @@ fn main() -> Result<()> {
         )
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("list") {
-        let url = matches.value_of("url").unwrap();
-        list(url, matches.is_present("files_only"))
+        list(
+            matches.value_of("url").unwrap(),
+            matches.is_present("files_only"),
+        )
     } else if let Some(matches) = matches.subcommand_matches("download") {
-        let url = matches.value_of("url").unwrap();
-        let filename = matches.value_of("filename").unwrap();
-        let outputfile = matches.value_of("outputfile").unwrap();
-        download(url, filename, outputfile)
+        download(
+            matches.value_of("url").unwrap(),
+            matches.value_of("filename").unwrap(),
+            matches.value_of("outputfile").unwrap(),
+        )
     } else {
         Err(anyhow!("No command matched, try --help"))
     }

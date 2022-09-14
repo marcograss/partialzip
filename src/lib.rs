@@ -1,5 +1,5 @@
 #![warn(missing_docs, missing_debug_implementations)]
-//! `partialzip` is a crate to download or list single files from online zip archives.
+//! `partialzip` is a crate to download single files from online zip archives, or list zip content.
 //!
 //! The main goal is to save time and memory by only downloading and extracting what you need instead of the whole zip archive.
 //!
