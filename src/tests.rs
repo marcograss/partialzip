@@ -2,25 +2,28 @@
 mod utils_tests {
     #[test]
     pub fn url_tests() {
-        let ok = [
+        let valid_urls = [
             "http://www.test.com",
             "https://sub.test.com",
             "ftp://ftp.test.com",
             "file://localhost/home/test/1.zip",
         ];
-        let not_ok = [
+        let invalid_urls = [
             "asdasd://",
             "js:",
             "smb://storage.test.com",
             "not parsable URL",
         ];
-        for s in ok {
-            assert!(crate::utils::url_is_valid(s), "{s} should be a valid url");
-        }
-        for s in not_ok {
+        for url in valid_urls {
             assert!(
-                !crate::utils::url_is_valid(s),
-                "{s} should be a invalid url"
+                crate::utils::url_is_valid(url),
+                "{url} should be a valid url"
+            );
+        }
+        for url in invalid_urls {
+            assert!(
+                !crate::utils::url_is_valid(url),
+                "{url} should be a invalid url"
             )
         }
     }
@@ -36,31 +39,31 @@ mod partzip_tests {
 
     use crate::partzip::{PartialZip, PartialZipError, PartialZipFile};
 
+    use anyhow::Result;
+
     struct TestServer {
         pub address: String,
     }
 
-    async fn spawn_server() -> TestServer {
-        let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
-        let port = listener.local_addr().unwrap().port();
+    async fn spawn_server() -> Result<TestServer> {
+        let listener = TcpListener::bind("127.0.0.1:0")?;
+        let port = listener.local_addr()?.port();
         let address = format!("http://127.0.0.1:{port}");
         let server = HttpServer::new(move || {
             App::new().service(fs::Files::new("/", "./testdata").show_files_listing())
         })
-        .listen(listener)
-        .unwrap()
+        .listen(listener)?
         .run();
-        let _ = tokio::spawn(server);
-        TestServer { address }
+        tokio::spawn(server);
+        println!("listening on {address}");
+        Ok(TestServer { address })
     }
 
     #[tokio::test]
-    async fn test_list() {
-        let address = spawn_server().await.address;
-        println!("listening on {address}");
+    async fn test_list() -> Result<()> {
+        let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz =
-                PartialZip::new(&(address + "/test.zip")).expect("cannot create partialzip");
+            let mut pz = PartialZip::new(&(address + "/test.zip"))?;
             let list = pz.list();
             assert_eq!(
                 list,
@@ -79,35 +82,30 @@ mod partzip_tests {
                     }
                 ]
             );
+            Ok(())
         })
-        .await
-        .unwrap();
+        .await?
     }
 
     #[tokio::test]
-    async fn test_download() {
-        let address = spawn_server().await.address;
-        println!("listening on {address}");
+    async fn test_download() -> Result<()> {
+        let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz =
-                PartialZip::new(&(address + "/test.zip")).expect("cannot create partialzip");
-            let downloaded = pz.download("1.txt").expect("cannot download 1.txt");
+            let mut pz = PartialZip::new(&(address + "/test.zip"))?;
+            let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
-            let downloaded = pz.download("2.txt").expect("cannot download 2.txt");
+            let downloaded = pz.download("2.txt")?;
             assert_eq!(downloaded, vec![0x42, 0x42, 0x42, 0x42, 0xa]);
+            Ok(())
         })
-        .await
-        .unwrap();
+        .await?
     }
 
     #[tokio::test]
-    async fn test_download_invalid_file() {
-        let address = spawn_server().await.address;
-        println!("listening on {address}");
+    async fn test_download_invalid_file() -> Result<()> {
+        let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz =
-                PartialZip::new(&(address + "/test.zip")).expect("cannot create partialzip");
-            println!("{:?}", pz);
+            let mut pz = PartialZip::new(&(address + "/test.zip"))?;
             let downloaded = pz.download("414141.txt");
             assert!(
                 matches!(
@@ -116,15 +114,14 @@ mod partzip_tests {
                 ),
                 "didn't throw an error when a file is not in the zip"
             );
+            Ok(())
         })
-        .await
-        .unwrap();
+        .await?
     }
 
     #[tokio::test]
-    async fn test_invalid_header() {
-        let address = spawn_server().await.address;
-        println!("listening on {address}");
+    async fn test_invalid_header() -> Result<()> {
+        let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(&(address + "/invalid.zip"));
             assert!(
@@ -137,14 +134,13 @@ mod partzip_tests {
                 "didn't throw an error with invalid header"
             );
         })
-        .await
-        .unwrap();
+        .await?;
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_invalid_url() {
-        let address = spawn_server().await.address;
-        println!("listening on {address}");
+    async fn test_invalid_url() -> Result<()> {
+        spawn_server().await?;
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(&("invalid URL"));
             assert!(
@@ -155,19 +151,16 @@ mod partzip_tests {
                 println!("{:?}", e);
             }
         })
-        .await
-        .unwrap();
+        .await?;
+        Ok(())
     }
 
     #[cfg(unix)]
     #[test]
-    fn test_file_protocol() {
+    fn test_file_protocol() -> Result<()> {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
-        let mut pz = PartialZip::new(&format!("file://localhost{}", d.display())).expect(&format!(
-            "cannot create partialzip for file://localhost{}",
-            d.display()
-        ));
+        let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))?;
         let list = pz.list();
         assert_eq!(
             list,
@@ -186,5 +179,6 @@ mod partzip_tests {
                 }
             ]
         );
+        Ok(())
     }
 }
