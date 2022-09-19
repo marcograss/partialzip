@@ -155,7 +155,7 @@ impl PartialZip {
 /// Reader for the partialzip doing only the partial read instead of downloading everything
 #[derive(Debug)]
 pub struct PartialReader {
-    /// url at which we read the file
+    /// URL at which we read the file
     pub url: String,
     file_size: u64,
     easy: Easy,

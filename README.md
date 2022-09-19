@@ -39,7 +39,7 @@ sometimes zip archives are huge and you just need a couple of files, for example
 
 As you can see the time (and traffic) saved is significant.
 
-PartialZip only download the required chunks for your file, allowing you to download few MB instead of serveral GB of the original IPSW.
+PartialZip only download the required chunks for your file, allowing you to download few MB instead of several GB of the original IPSW.
 
 ## Showcases
 
