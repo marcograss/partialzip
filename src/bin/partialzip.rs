@@ -5,10 +5,12 @@ use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use url::Url;
 
 /// Handler to list the files from command line
 fn list(url: &str, files_only: bool) -> Result<()> {
-    let mut pz = PartialZip::new(url)?;
+    let url = Url::parse(url)?;
+    let mut pz = PartialZip::new(&url)?;
     let l = pz.list();
     for f in l {
         let descr = if files_only {
@@ -31,7 +33,8 @@ fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
     if Path::new(outputfile).exists() {
         return Err(anyhow!("The output file {outputfile} already exists"));
     }
-    let mut pz = PartialZip::new(url)?;
+    let url = Url::parse(url)?;
+    let mut pz = PartialZip::new(&url)?;
     let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
     f.write_all(&content)?;

@@ -101,7 +101,7 @@ impl PartialZip {
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
-    pub fn new(url: &str) -> Result<Self, PartialZipError> {
+    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new(url)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
@@ -168,7 +168,8 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
 
-    pub fn new(url: &str) -> Result<Self, PartialZipError> {
+    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+        let url = &url.to_string();
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
         }
