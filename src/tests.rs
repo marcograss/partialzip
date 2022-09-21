@@ -42,7 +42,7 @@ mod partzip_tests {
     use anyhow::Result;
 
     struct TestServer {
-        pub address: String,
+        address: String,
     }
 
     async fn spawn_server() -> Result<TestServer> {
