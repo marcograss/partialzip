@@ -22,7 +22,7 @@ clap = "3.2.22"
 conv = "0.3.3"
 curl = "0.4.44"
 num-traits = "0.2.15"
-thiserror = "1.0.35"
+thiserror = "1.0.36"
 url = "2.3.1"
 zip = "0.6.2"
 
