@@ -28,6 +28,13 @@ fn cli_flags_work() -> Result<()> {
             .or(predicate::str::contains("partialzip.exe download")),
     );
 
+    let mut cmd = Command::cargo_bin("partialzip")?;
+    cmd.arg("pipe");
+    cmd.assert().failure().stderr(
+        predicate::str::contains("partialzip pipe")
+            .or(predicate::str::contains("partialzip.exe pipe")),
+    );
+
     Ok(())
 }
 
@@ -77,6 +84,10 @@ fn cli_works() -> Result<()> {
         .stderr(predicate::str::contains("already exists"));
 
     fs::remove_file(&output_file)?;
+
+    let mut cmd = Command::cargo_bin("partialzip")?;
+    cmd.arg("pipe").arg(&target_arg).arg("1.txt");
+    cmd.assert().success();
 
     Ok(())
 }

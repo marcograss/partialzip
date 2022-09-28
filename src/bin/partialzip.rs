@@ -42,6 +42,15 @@ fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
     Ok(())
 }
 
+/// Handler to download the file and pipe it to stdout
+fn pipe(url: &str, filename: &str) -> Result<()> {
+    let url = Url::parse(url)?;
+    let mut pz = PartialZip::new(&url)?;
+    let content = pz.download(filename)?;
+    std::io::stdout().write_all(&content)?;
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
@@ -70,6 +79,12 @@ fn main() -> Result<()> {
                 .arg(Arg::with_name("filename").required(true).index(2))
                 .arg(Arg::with_name("outputfile").required(true).index(3)),
         )
+        .subcommand(
+            SubCommand::with_name("pipe")
+                .about("stream a file from the zip to stdout")
+                .arg(Arg::with_name("url").required(true).index(1))
+                .arg(Arg::with_name("filename").required(true).index(2)),
+        )
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("list") {
         list(
@@ -81,6 +96,11 @@ fn main() -> Result<()> {
             matches.value_of("url").unwrap(),
             matches.value_of("filename").unwrap(),
             matches.value_of("outputfile").unwrap(),
+        )
+    } else if let Some(matches) = matches.subcommand_matches("pipe") {
+        pipe(
+            matches.value_of("url").unwrap(),
+            matches.value_of("filename").unwrap(),
         )
     } else {
         Err(anyhow!("No command matched, try --help"))

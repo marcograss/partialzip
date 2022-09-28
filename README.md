@@ -28,7 +28,16 @@ cargo build --release
 # for example for kernelcache:
 ./target/release/partialzip download http://yoururl/file.ipsw kernelcache.release.iphone10 kernelcache.release.iphone10
 ```
-
+### Docker:
+```
+# build the container
+docker build -t marcograss/partialzip .
+# run it
+# list files
+docker run --rm marcograss/partialzip list http://yoururl/file.ipsw
+# download piping to stdout and save on the host
+docker run --rm marcograss/partialzip list http://yoururl/file.ipsw kernelcache.release.iphone10 kernelcache.release.iphone10
+```
 ## What is used for
 
 sometimes zip archives are huge and you just need a couple of files, for example, a kernelcache from a ipsw
