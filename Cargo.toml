@@ -22,7 +22,7 @@ clap = "3.2.22"
 conv = "0.3.3"
 curl = "0.4.44"
 num-traits = "0.2.15"
-thiserror = "1.0.36"
+thiserror = "1.0.37"
 url = "2.3.1"
 zip = "0.6.2"
 
@@ -32,4 +32,4 @@ actix-web = {version = "4.2.1", default-features = false, features = []}
 assert_cmd = "2.0.4"
 predicates = "2.1.1"
 tempfile = "3.3.0"
-tokio = {version = "1.21.1", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "1.21.2", features = ["macros", "rt-multi-thread"]}
