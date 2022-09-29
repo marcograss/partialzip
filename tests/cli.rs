@@ -12,7 +12,7 @@ fn cli_flags_work() -> Result<()> {
     cmd.arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("USAGE"));
+        .stdout(predicate::str::contains("Usage"));
 
     let mut cmd = Command::cargo_bin("partialzip")?;
     cmd.arg("list");

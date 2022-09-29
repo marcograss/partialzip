@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
-use clap::{App, Arg, SubCommand};
+use clap::{Arg, ArgAction, Command};
 use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::io::prelude::*;
@@ -52,55 +52,51 @@ fn pipe(url: &str, filename: &str) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let matches = App::new(env!("CARGO_PKG_NAME"))
+    let matches = Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .subcommand(
-            SubCommand::with_name("list")
+            Command::new("list")
                 .about("list the files inside the zip")
                 .arg(
-                    Arg::with_name("files_only")
+                    Arg::new("files_only")
                         .short('f')
-                        .takes_value(false)
+                        .action(ArgAction::SetTrue)
                         .required(false)
                         .help("list files only, not size and support"),
                 )
-                .arg(
-                    Arg::with_name("url")
-                        .required(true)
-                        .help("url of the zip file"),
-                ),
+                .arg(Arg::new("url").required(true).help("url of the zip file")),
         )
         .subcommand(
-            SubCommand::with_name("download")
+            Command::new("download")
                 .about("download a file from the zip")
-                .arg(Arg::with_name("url").required(true).index(1))
-                .arg(Arg::with_name("filename").required(true).index(2))
-                .arg(Arg::with_name("outputfile").required(true).index(3)),
+                .arg(Arg::new("url").required(true).index(1))
+                .arg(Arg::new("filename").required(true).index(2))
+                .arg(Arg::new("outputfile").required(true).index(3)),
         )
         .subcommand(
-            SubCommand::with_name("pipe")
+            Command::new("pipe")
                 .about("stream a file from the zip to stdout")
-                .arg(Arg::with_name("url").required(true).index(1))
-                .arg(Arg::with_name("filename").required(true).index(2)),
+                .arg(Arg::new("url").required(true).index(1))
+                .arg(Arg::new("filename").required(true).index(2)),
         )
         .get_matches();
     if let Some(matches) = matches.subcommand_matches("list") {
         list(
-            matches.value_of("url").unwrap(),
-            matches.is_present("files_only"),
+            matches.get_one::<String>("url").unwrap(),
+            matches.get_flag("files_only"),
         )
     } else if let Some(matches) = matches.subcommand_matches("download") {
         download(
-            matches.value_of("url").unwrap(),
-            matches.value_of("filename").unwrap(),
-            matches.value_of("outputfile").unwrap(),
+            matches.get_one::<String>("url").unwrap(),
+            matches.get_one::<String>("filename").unwrap(),
+            matches.get_one::<String>("outputfile").unwrap(),
         )
     } else if let Some(matches) = matches.subcommand_matches("pipe") {
         pipe(
-            matches.value_of("url").unwrap(),
-            matches.value_of("filename").unwrap(),
+            matches.get_one::<String>("url").unwrap(),
+            matches.get_one::<String>("filename").unwrap(),
         )
     } else {
         Err(anyhow!("No command matched, try --help"))
