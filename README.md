@@ -36,7 +36,7 @@ docker build -t marcograss/partialzip .
 # list files
 docker run --rm marcograss/partialzip list http://yoururl/file.ipsw
 # download piping to stdout and save on the host
-docker run --rm marcograss/partialzip list http://yoururl/file.ipsw kernelcache.release.iphone10 kernelcache.release.iphone10
+docker run --rm marcograss/partialzip pipe http://yoururl/file.ipsw kernelcache.release.iphone10 > kernelcache.release.iphone10
 ```
 ## What is used for
 
