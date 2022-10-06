@@ -18,7 +18,7 @@ version = "1.2.2"
 [dependencies]
 anyhow = "1.0.65"
 bytesize = "1.1.0"
-clap = "4.0.4"
+clap = "4.0.10"
 conv = "0.3.3"
 curl = "0.4.44"
 num-traits = "0.2.15"
