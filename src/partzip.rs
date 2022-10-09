@@ -16,7 +16,7 @@ use zip::ZipArchive;
 /// Enum for errors thrown by the partialzip crate
 #[derive(Error, Debug)]
 pub enum PartialZipError {
-    /// the URL is invalid
+    /// The URL is invalid
     #[error("Invalid URL")]
     InvalidUrl,
     /// The file is not found
@@ -77,22 +77,22 @@ impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
 /// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
 pub struct PartialZip {
-    /// URL of the the zip archive
+    /// URL of the zip archive
     pub url: String,
     /// The archive object
     pub archive: ZipArchive<BufReader<PartialReader>>,
 }
 
-/// struct for a file in the zip file with some attributes
+/// Struct for a file in the zip file with some attributes
 #[derive(Debug, PartialEq, Eq)]
 pub struct PartialZipFile {
-    /// filename
+    /// Filename
     pub name: String,
-    /// compressed size of the file
+    /// Compressed size of the file
     pub compressed_size: u64,
-    /// how it has been compressed (compression method, like bzip2, deflate, etc.)
+    /// How it has been compressed (compression method, like bzip2, deflate, etc.)
     pub compression_method: zip::CompressionMethod,
-    /// is the compression supported or not by this crate
+    /// Is the compression supported or not by this crate?
     pub supported: bool,
 }
 
