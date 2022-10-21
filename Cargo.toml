@@ -16,9 +16,9 @@ rust-version = "1.60.0"
 version = "1.2.5-alpha.1"
 
 [dependencies]
-anyhow = "1.0.65"
+anyhow = "1.0.66"
 bytesize = "1.1.0"
-clap = "4.0.17"
+clap = "4.0.18"
 conv = "0.3.3"
 curl = "0.4.44"
 num-traits = "0.2.15"
@@ -29,7 +29,7 @@ zip = "0.6.3"
 [dev-dependencies]
 actix-files = "0.6.2"
 actix-web = {version = "4.2.1", default-features = false, features = []}
-assert_cmd = "2.0.4"
+assert_cmd = "2.0.5"
 predicates = "2.1.1"
 tempfile = "3.3.0"
 tokio = {version = "1.21.2", features = ["macros", "rt-multi-thread"]}
