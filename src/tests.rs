@@ -36,7 +36,7 @@ mod partzip_tests {
     use url::Url;
     use zip::result::ZipError;
 
-    use actix_web::{App, HttpServer};
+    use actix_web::{App, HttpResponse, HttpServer};
 
     use crate::partzip::{PartialZip, PartialZipError, PartialZipFile};
 
@@ -53,7 +53,13 @@ mod partzip_tests {
         // Local server address
         let address = Url::parse(&format!("http://127.0.0.1:{port}"))?;
         let server = HttpServer::new(move || {
-            App::new().service(fs::Files::new("/", "./testdata").show_files_listing())
+            App::new()
+                .service(fs::Files::new("/files/", "./testdata").show_files_listing())
+                .service(actix_web::web::resource("/redirect").to(|| async {
+                    HttpResponse::Found()
+                        .append_header(("Location", "/files/test.zip"))
+                        .finish()
+                }))
         })
         .listen(listener)?
         .run();
@@ -66,7 +72,7 @@ mod partzip_tests {
     async fn test_list() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let list = pz.list();
             assert_eq!(
                 list,
@@ -94,7 +100,7 @@ mod partzip_tests {
     async fn test_download() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             let downloaded = pz.download("2.txt")?;
@@ -108,7 +114,7 @@ mod partzip_tests {
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let downloaded = pz.download("414141.txt");
             assert!(
                 matches!(
@@ -128,7 +134,7 @@ mod partzip_tests {
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(
                 &address
-                    .join("/invalid.zip")
+                    .join("/files/invalid.zip")
                     .expect("cannot join invalid URL"),
             );
             assert!(
@@ -187,5 +193,33 @@ mod partzip_tests {
             ]
         );
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_redirect() -> Result<()> {
+        let address = spawn_server().await?.address;
+        tokio::task::spawn_blocking(move || {
+            let mut pz = PartialZip::new(&address.join("/redirect")?)?;
+            let list = pz.list();
+            assert_eq!(
+                list,
+                vec![
+                    PartialZipFile {
+                        name: "1.txt".to_string(),
+                        compressed_size: 7,
+                        compression_method: zip::CompressionMethod::Deflated,
+                        supported: true
+                    },
+                    PartialZipFile {
+                        name: "2.txt".to_string(),
+                        compressed_size: 7,
+                        compression_method: zip::CompressionMethod::Deflated,
+                        supported: true
+                    }
+                ]
+            );
+            Ok(())
+        })
+        .await?
     }
 }
