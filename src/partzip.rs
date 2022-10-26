@@ -104,8 +104,15 @@ impl PartialZip {
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
-    pub fn new(url: &dyn ToString, must_ranged: bool) -> Result<Self, PartialZipError> {
-        let reader = PartialReader::new(url, must_ranged)?;
+    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+        PartialZip::new_check_range(url, false)
+    }
+    /// Create a new [`PartialZip`]
+    /// # Errors
+    ///
+    /// Will return a [`PartialZipError`] enum depending on what error happened
+    pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
+        let reader = PartialReader::new_check_range(url, check_range)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(PartialZip {
@@ -170,8 +177,15 @@ impl PartialReader {
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
+    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+        PartialReader::new_check_range(url, false)
+    }
+    /// Creates a new [`PartialReader`]
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] enum depending on what happened
 
-    pub fn new(url: &dyn ToString, must_ranged: bool) -> Result<Self, PartialZipError> {
+    pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
         let url = &url.to_string();
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
@@ -188,7 +202,7 @@ impl PartialReader {
             .to_u64()
             .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
 
-        if must_ranged {
+        if check_range {
             // check if range-request is possible by request 1 byte. if 206 returned, we can make future request.
             easy.range("0-0")?;
             easy.nobody(true)?;

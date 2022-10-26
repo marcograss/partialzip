@@ -63,6 +63,12 @@ fn cli_works() -> Result<()> {
         .success()
         .stdout(predicate::str::is_match("1.txt\n2.txt\n").unwrap());
 
+    let mut cmd = Command::cargo_bin("partialzip")?;
+    cmd.arg("-r").arg("list").arg(&target_arg);
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Range request not supported\n"));
+
     let output_file = NamedTempFile::new()?.path().display().to_string();
 
     let mut cmd = Command::cargo_bin("partialzip")?;

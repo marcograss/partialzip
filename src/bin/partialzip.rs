@@ -10,7 +10,7 @@ use url::Url;
 /// Handler to list the files from command line
 fn list(url: &str, files_only: bool, must_ranged: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url, must_ranged)?;
+    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
     let l = pz.list();
     for f in l {
         let descr = if files_only {
@@ -34,7 +34,7 @@ fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> R
         return Err(anyhow!("The output file {outputfile} already exists"));
     }
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url, must_ranged)?;
+    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
     let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
     f.write_all(&content)?;
@@ -45,7 +45,7 @@ fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> R
 /// Handler to download the file and pipe it to stdout
 fn pipe(url: &str, filename: &str, must_ranged: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url, must_ranged)?;
+    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
     let content = pz.download(filename)?;
     std::io::stdout().write_all(&content)?;
     Ok(())
@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
-            Arg::new("must_ranged")
+            Arg::new("check_range")
                 .short('r')
                 .action(ArgAction::SetTrue)
                 .required(false)
@@ -89,25 +89,25 @@ fn main() -> Result<()> {
                 .arg(Arg::new("filename").required(true).index(2)),
         )
         .get_matches();
-    let must_ranged = matches.get_flag("must_ranged");
+    let check_range = matches.get_flag("check_range");
     if let Some(matches) = matches.subcommand_matches("list") {
         list(
             matches.get_one::<String>("url").unwrap(),
             matches.get_flag("files_only"),
-            must_ranged,
+            check_range,
         )
     } else if let Some(matches) = matches.subcommand_matches("download") {
         download(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
             matches.get_one::<String>("outputfile").unwrap(),
-            must_ranged,
+            check_range,
         )
     } else if let Some(matches) = matches.subcommand_matches("pipe") {
         pipe(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
-            must_ranged,
+            check_range,
         )
     } else {
         Err(anyhow!("No command matched, try --help"))
