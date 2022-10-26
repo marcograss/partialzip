@@ -72,7 +72,7 @@ mod partzip_tests {
     async fn test_list() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?, false)?;
             let list = pz.list();
             assert_eq!(
                 list,
@@ -100,7 +100,7 @@ mod partzip_tests {
     async fn test_download() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?, false)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             let downloaded = pz.download("2.txt")?;
@@ -114,7 +114,7 @@ mod partzip_tests {
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?, false)?;
             let downloaded = pz.download("414141.txt");
             assert!(
                 matches!(
@@ -136,6 +136,7 @@ mod partzip_tests {
                 &address
                     .join("/files/invalid.zip")
                     .expect("cannot join invalid URL"),
+                false,
             );
             assert!(
                 matches!(
@@ -155,7 +156,7 @@ mod partzip_tests {
     async fn test_invalid_url() -> Result<()> {
         spawn_server().await?;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&"invalid URL");
+            let pz = PartialZip::new(&"invalid URL", false);
             assert!(
                 matches!(pz, Err(PartialZipError::InvalidUrl)),
                 "didn't throw an error with invalid URL"
@@ -173,7 +174,7 @@ mod partzip_tests {
     fn test_file_protocol() -> Result<()> {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
-        let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))?;
+        let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()), false)?;
         let list = pz.list();
         assert_eq!(
             list,
@@ -195,11 +196,24 @@ mod partzip_tests {
         Ok(())
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn test_must_ranged_on_not_ranging_protocol() -> Result<()> {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("testdata/test.zip");
+        let pz = PartialZip::new(&format!("file://localhost{}", d.display()), true);
+        assert!(
+            matches!(pz, Err(PartialZipError::RangeNotSupported)),
+            "didn't throw an error with range not supported"
+        );
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_redirect() -> Result<()> {
         let address = spawn_server().await?.address;
         tokio::task::spawn_blocking(move || {
-            let mut pz = PartialZip::new(&address.join("/redirect")?)?;
+            let mut pz = PartialZip::new(&address.join("/redirect")?, false)?;
             let list = pz.list();
             assert_eq!(
                 list,

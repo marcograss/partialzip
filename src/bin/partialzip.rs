@@ -8,9 +8,9 @@ use std::path::Path;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, files_only: bool) -> Result<()> {
+fn list(url: &str, files_only: bool, must_ranged: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url)?;
+    let mut pz = PartialZip::new(&url, must_ranged)?;
     let l = pz.list();
     for f in l {
         let descr = if files_only {
@@ -29,12 +29,12 @@ fn list(url: &str, files_only: bool) -> Result<()> {
 }
 
 /// Handler to download the file from command line
-fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
+fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> Result<()> {
     if Path::new(outputfile).exists() {
         return Err(anyhow!("The output file {outputfile} already exists"));
     }
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url)?;
+    let mut pz = PartialZip::new(&url, must_ranged)?;
     let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
     f.write_all(&content)?;
@@ -43,9 +43,9 @@ fn download(url: &str, filename: &str, outputfile: &str) -> Result<()> {
 }
 
 /// Handler to download the file and pipe it to stdout
-fn pipe(url: &str, filename: &str) -> Result<()> {
+fn pipe(url: &str, filename: &str, must_ranged: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new(&url)?;
+    let mut pz = PartialZip::new(&url, must_ranged)?;
     let content = pz.download(filename)?;
     std::io::stdout().write_all(&content)?;
     Ok(())
@@ -56,6 +56,13 @@ fn main() -> Result<()> {
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
+        .arg(
+            Arg::new("must_ranged")
+                .short('r')
+                .action(ArgAction::SetTrue)
+                .required(false)
+                .help("Require using url with range support"),
+        )
         .subcommand(
             Command::new("list")
                 .about("list the files inside the zip")
@@ -82,21 +89,25 @@ fn main() -> Result<()> {
                 .arg(Arg::new("filename").required(true).index(2)),
         )
         .get_matches();
+    let must_ranged = matches.get_flag("must_ranged");
     if let Some(matches) = matches.subcommand_matches("list") {
         list(
             matches.get_one::<String>("url").unwrap(),
             matches.get_flag("files_only"),
+            must_ranged,
         )
     } else if let Some(matches) = matches.subcommand_matches("download") {
         download(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
             matches.get_one::<String>("outputfile").unwrap(),
+            must_ranged,
         )
     } else if let Some(matches) = matches.subcommand_matches("pipe") {
         pipe(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
+            must_ranged,
         )
     } else {
         Err(anyhow!("No command matched, try --help"))

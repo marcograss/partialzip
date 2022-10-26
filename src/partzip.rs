@@ -22,6 +22,9 @@ pub enum PartialZipError {
     /// The file is not found
     #[error("File Not Found")]
     FileNotFound,
+    /// Range request not supported
+    #[error("Range request not supported")]
+    RangeNotSupported,
     /// The compression scheme is currently not supported
     #[error("{0} is a Unsupported Compression")]
     UnsupportedCompression(u16),
@@ -101,8 +104,8 @@ impl PartialZip {
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
-    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        let reader = PartialReader::new(url)?;
+    pub fn new(url: &dyn ToString, must_ranged: bool) -> Result<Self, PartialZipError> {
+        let reader = PartialReader::new(url, must_ranged)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(PartialZip {
@@ -168,7 +171,7 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
 
-    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+    pub fn new(url: &dyn ToString, must_ranged: bool) -> Result<Self, PartialZipError> {
         let url = &url.to_string();
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
@@ -184,6 +187,24 @@ impl PartialReader {
             .content_length_download()?
             .to_u64()
             .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
+
+        if must_ranged {
+            // check if range-request is possible by request 1 byte. if 206 returned, we can make future request.
+            easy.range("0-0")?;
+            easy.nobody(true)?;
+            easy.perform()?;
+            let head_size = easy.content_length_download()?.to_u64().ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, "can not perform range request")
+            })?;
+            if head_size != 1 {
+                return Err(PartialZipError::RangeNotSupported);
+            }
+            if easy.response_code()? != 206 {
+                return Err(PartialZipError::RangeNotSupported);
+            }
+            easy.range("")?;
+            easy.nobody(false)?;
+        }
         Ok(PartialReader {
             url: url.to_string(),
             file_size,
