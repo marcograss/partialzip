@@ -50,6 +50,19 @@ As you can see the time (and traffic) saved is significant.
 
 PartialZip only downloads the required chunks for your file, allowing you to download a few Mb instead of several Gb of the original IPSW.
 
+## Prerequisites
+One prerequisite to be able to partially download zips from http servers is that the server support the Range Header. In this way you can request specific parts of the archive.
+
+Not all servers support this. You can check if this is supported using the `-r` flag
+
+```
+cargo run -- -r list http://yoururl/yourfile.zip
+```
+
+## How to use as a library
+If you want to use partialzip as a library and you want to reduce the binary size, you can choose in your `Cargo.toml` the flag `default-features = false` in the partialzip dependency.
+This will not build the command line of partialzip which is not required to use it as a library, and it will avoid including some unnecessary dependencies and save space.
+
 ## Showcases
 
 - [Google Project Zero Blogpost: The curious tale of a fake Carrier.app](https://googleprojectzero.blogspot.com/2022/06/curious-case-carrier-app.html) - partialzip was used to efficiently download as many versions as possible of the DCP firmware from the iOS ipsws.

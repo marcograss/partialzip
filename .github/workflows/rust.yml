@@ -16,8 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - uses: taiki-e/install-action@cargo-hack
     - name: Build
       run: cargo build --verbose
+    - name: Cargo hack
+      run: cargo clean && cargo hack --each-feature test
     - name: Run tests
       run: cargo test --verbose
     - name: Clippy Pedantic
