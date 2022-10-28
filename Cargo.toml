@@ -13,7 +13,7 @@ name = "partialzip"
 readme = "README.md"
 repository = "https://github.com/marcograss/partialzip"
 rust-version = "1.60.0"
-version = "1.2.7"
+version = "1.2.8-alpha.1"
 
 [features]
 default = ["cmdline"]
@@ -26,6 +26,10 @@ path = "src/lib.rs"
 path = "src/bin/partialzip.rs"
 name = "partialzip"
 required-features = ["cmdline"]
+
+[[bench]]
+name = "pz_benchmark"
+harness = false
 
 [dependencies]
 anyhow = {version = "1.0.66", optional = true}
@@ -46,3 +50,4 @@ predicates = "2.1.1"
 tempfile = "3.3.0"
 tokio = {version = "1.21.2", features = ["macros", "rt-multi-thread"]}
 anyhow = "1.0.66"
+criterion = "0.4.0"
