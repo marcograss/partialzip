@@ -52,6 +52,8 @@ fn pipe(url: &str, filename: &str, must_ranged: bool) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
+
     let matches = Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))

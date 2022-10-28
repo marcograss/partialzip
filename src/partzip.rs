@@ -1,5 +1,6 @@
 use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
+use log::warn;
 use num_traits::ToPrimitive;
 use std::convert;
 use std::io;
@@ -134,16 +135,18 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    file_list.push(PartialZipFile {
+                    let pzf = PartialZipFile {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
                         compression_method,
                         supported,
-                    });
+                    };
+                    file_list.push(pzf);
                 }
-                Err(_) => {
+                Err(e) => {
                     // We are unable to get a file, let's try to continue,
                     // and at least return the files we can
+                    warn!("list: error while matching file by index: {} - {}", i, e);
                     continue;
                 }
             };
@@ -203,7 +206,7 @@ impl PartialReader {
             .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
 
         if check_range {
-            // check if range-request is possible by request 1 byte. if 206 returned, we can make future request.
+            // check if range-request is possible by request 1 byte. if 206 Partial Content is returned, we can make future request.
             easy.range("0-0")?;
             easy.nobody(true)?;
             easy.perform()?;
@@ -213,6 +216,7 @@ impl PartialReader {
             if head_size != 1 {
                 return Err(PartialZipError::RangeNotSupported);
             }
+            // 206 Partial Content
             if easy.response_code()? != 206 {
                 return Err(PartialZipError::RangeNotSupported);
             }
