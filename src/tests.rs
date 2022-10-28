@@ -110,6 +110,21 @@ mod partzip_tests {
         .await?
     }
 
+    #[cfg(feature = "progressbar")]
+    #[tokio::test]
+    async fn test_download_progressbar() -> Result<()> {
+        let address = spawn_server().await?.address;
+        tokio::task::spawn_blocking(move || {
+            let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let downloaded = pz.download_with_progressbar("1.txt")?;
+            assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            let downloaded = pz.download_with_progressbar("2.txt")?;
+            assert_eq!(downloaded, vec![0x42, 0x42, 0x42, 0x42, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
     #[tokio::test]
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server().await?.address;

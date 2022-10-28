@@ -35,6 +35,9 @@ fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> R
     }
     let url = Url::parse(url)?;
     let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
+    #[cfg(feature = "progressbar")]
+    let content = pz.download_with_progressbar(filename)?;
+    #[cfg(not(feature = "progressbar"))]
     let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
     f.write_all(&content)?;

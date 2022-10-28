@@ -163,6 +163,21 @@ impl PartialZip {
         file.read_to_end(&mut content)?;
         Ok(content)
     }
+
+    /// Download a single file from the archive showing a progress bar
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] depending on what happened
+    #[cfg(feature = "progressbar")]
+    pub fn download_with_progressbar(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
+        use indicatif::ProgressBar;
+
+        let file = self.archive.by_name(filename)?;
+        let mut content = Vec::with_capacity(usize::value_from(file.compressed_size())?);
+        let pb = ProgressBar::new(file.compressed_size());
+        io::copy(&mut pb.wrap_read(file), &mut content)?;
+        Ok(content)
+    }
 }
 
 /// Reader for the partialzip doing only the partial read instead of downloading everything

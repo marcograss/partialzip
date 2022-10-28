@@ -16,8 +16,9 @@ rust-version = "1.60.0"
 version = "1.2.8-alpha.1"
 
 [features]
-default = ["cmdline"]
+default = ["cmdline", "progressbar"]
 cmdline = ["dep:anyhow", "dep:clap", "dep:env_logger"]
+progressbar = ["dep:indicatif"]
 
 [lib]
 path = "src/lib.rs"
@@ -38,6 +39,7 @@ clap = {version = "4.0.18", optional = true}
 conv = "0.3.3"
 curl = "0.4.44"
 env_logger = { version = "0.9.1", optional = true }
+indicatif = { version = "0.17.1", optional = true }
 log = "0.4.17"
 num-traits = "0.2.15"
 thiserror = "1.0.37"
