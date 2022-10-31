@@ -116,7 +116,7 @@ impl PartialZip {
         let reader = PartialReader::new_check_range(url, check_range)?;
         let bufreader = BufReader::new(reader);
         let archive = ZipArchive::new(bufreader)?;
-        Ok(PartialZip {
+        Ok(Self {
             url: url.to_string(),
             archive,
         })
@@ -169,7 +169,10 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
-    pub fn download_with_progressbar(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
+    pub fn download_with_progressbar(
+        &mut self,
+        filename: &str,
+    ) -> Result<Vec<u8>, PartialZipError> {
         use indicatif::ProgressBar;
 
         let file = self.archive.by_name(filename)?;
@@ -238,7 +241,7 @@ impl PartialReader {
             easy.range("")?;
             easy.nobody(false)?;
         }
-        Ok(PartialReader {
+        Ok(Self {
             url: url.to_string(),
             file_size,
             easy,
