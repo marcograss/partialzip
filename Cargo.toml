@@ -5,7 +5,7 @@ default-run = "partialzip"
 description = "Download single files from online zip archives"
 documentation = "https://docs.rs/partialzip"
 edition = "2021"
-exclude = ["/testdata"]
+exclude = ["/testdata", "/.cargo"]
 homepage = "https://github.com/marcograss/partialzip"
 keywords = ["network", "utility", "io", "tool", "library"]
 license = "MPL-2.0"
@@ -13,24 +13,24 @@ name = "partialzip"
 readme = "README.md"
 repository = "https://github.com/marcograss/partialzip"
 rust-version = "1.60.0"
-version = "1.2.8"
+version = "1.2.9-alpha.1"
 
 [features]
-default = ["cmdline", "progressbar"]
 cmdline = ["dep:anyhow", "dep:clap", "dep:env_logger"]
+default = ["cmdline", "progressbar"]
 progressbar = ["dep:indicatif"]
 
 [lib]
 path = "src/lib.rs"
 
 [[bin]]
-path = "src/bin/partialzip.rs"
 name = "partialzip"
+path = "src/bin/partialzip.rs"
 required-features = ["cmdline"]
 
 [[bench]]
-name = "pz_benchmark"
 harness = false
+name = "pz_benchmark"
 
 [dependencies]
 anyhow = {version = "1.0.66", optional = true}
@@ -38,8 +38,8 @@ bytesize = "1.1.0"
 clap = {version = "4.0.18", optional = true}
 conv = "0.3.3"
 curl = "0.4.44"
-env_logger = { version = "0.9.1", optional = true }
-indicatif = { version = "0.17.1", optional = true }
+env_logger = {version = "0.9.1", optional = true}
+indicatif = {version = "0.17.1", optional = true}
 log = "0.4.17"
 num-traits = "0.2.15"
 thiserror = "1.0.37"
@@ -48,10 +48,10 @@ zip = "0.6.3"
 
 [dev-dependencies]
 actix-files = "0.6.2"
-actix-web = { version = "4.2.1", default-features = false, features = [] }
+actix-web = {version = "4.2.1", default-features = false, features = []}
+anyhow = "1.0.66"
 assert_cmd = "2.0.5"
+criterion = "0.4.0"
 predicates = "2.1.1"
 tempfile = "3.3.0"
-tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
-anyhow = "1.0.66"
-criterion = "0.4.0"
+tokio = {version = "1.21.2", features = ["macros", "rt-multi-thread"]}
