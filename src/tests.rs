@@ -24,7 +24,7 @@ mod utils_tests {
             assert!(
                 !crate::utils::url_is_valid(url),
                 "{url} should be a invalid url"
-            )
+            );
         }
     }
 }
@@ -46,7 +46,7 @@ mod partzip_tests {
         address: Url,
     }
 
-    async fn spawn_server() -> Result<TestServer> {
+    fn spawn_server() -> Result<TestServer> {
         // Bind to a random local port
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let port = listener.local_addr()?.port();
@@ -70,7 +70,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_list() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let list = pz.list();
@@ -98,7 +98,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_download() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let downloaded = pz.download("1.txt")?;
@@ -113,7 +113,7 @@ mod partzip_tests {
     #[cfg(feature = "progressbar")]
     #[tokio::test]
     async fn test_download_progressbar() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let downloaded = pz.download_with_progressbar("1.txt")?;
@@ -127,7 +127,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_download_invalid_file() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
             let downloaded = pz.download("414141.txt");
@@ -145,7 +145,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_invalid_header() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(
                 &address
@@ -168,7 +168,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_invalid_url() -> Result<()> {
-        spawn_server().await?;
+        spawn_server()?;
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(&"invalid URL");
             assert!(
@@ -176,7 +176,7 @@ mod partzip_tests {
                 "didn't throw an error with invalid URL"
             );
             if let Err(e) = pz {
-                println!("{:?}", e);
+                println!("{e:?}");
             }
         })
         .await?;
@@ -212,7 +212,7 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
-    fn test_must_ranged_on_not_ranging_protocol() -> Result<()> {
+    fn test_must_ranged_on_not_ranging_protocol() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
         let pz = PartialZip::new_check_range(&format!("file://localhost{}", d.display()), true);
@@ -220,12 +220,11 @@ mod partzip_tests {
             matches!(pz, Err(PartialZipError::RangeNotSupported)),
             "didn't throw an error with range not supported"
         );
-        Ok(())
     }
 
     #[tokio::test]
     async fn test_range_support() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new_check_range(&address.join("/files/test.zip")?, true)?;
             let downloaded = pz.download("1.txt")?;
@@ -237,7 +236,7 @@ mod partzip_tests {
 
     #[tokio::test]
     async fn test_redirect() -> Result<()> {
-        let address = spawn_server().await?.address;
+        let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/redirect")?)?;
             let list = pz.list();

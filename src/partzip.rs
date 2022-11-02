@@ -266,14 +266,14 @@ impl io::Read for PartialReader {
             .ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
-                    format!("start + buf.len() overflow {} {}", start, buf.len()),
+                    format!("start + buf.len() overflow {start} {}", buf.len()),
                 )
             })?
             .checked_sub(1)
             .ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
-                    format!("start + buf.len() - 1 underflow {} {}", start, buf.len()),
+                    format!("start + buf.len() - 1 underflow {start} {}", buf.len()),
                 )
             })?;
         let end = std::cmp::min(
@@ -288,7 +288,7 @@ impl io::Read for PartialReader {
         if end < start {
             return Err(std::io::Error::new(
                 ErrorKind::InvalidData,
-                format!("content_end < content_start {} {}", end, start),
+                format!("content_end < content_start {end} {start}"),
             ));
         }
         let range = format!("{start}-{end}");
@@ -311,12 +311,12 @@ impl io::Read for PartialReader {
         self.pos = self
             .pos
             .checked_add(n.to_u64().ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, format!("invalid read amount {}", n))
+                std::io::Error::new(ErrorKind::InvalidData, format!("invalid read amount {n}"))
             })?)
             .ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
-                    format!("adding {} overflows the reader position {}", n, self.pos),
+                    format!("adding {n} overflows the reader position {}", self.pos),
                 )
             })?;
 
