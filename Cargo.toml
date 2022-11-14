@@ -35,7 +35,7 @@ name = "pz_benchmark"
 [dependencies]
 anyhow = {version = "1.0.66", optional = true}
 bytesize = "1.1.0"
-clap = {version = "4.0.23", optional = true}
+clap = {version = "4.0.24", optional = true}
 conv = "0.3.3"
 curl = "0.4.44"
 env_logger = {version = "0.9.3", optional = true}
