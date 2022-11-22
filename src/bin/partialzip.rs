@@ -8,11 +8,11 @@ use std::path::Path;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, files_only: bool, must_ranged: bool) -> Result<()> {
+fn list(url: &str, files_only: bool, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
-    let l = pz.list();
-    for f in l {
+    let mut pz = PartialZip::new_check_range(&url, check_range)?;
+    let file_list = pz.list();
+    for f in file_list {
         let descr = if files_only {
             f.name
         } else {
@@ -29,12 +29,12 @@ fn list(url: &str, files_only: bool, must_ranged: bool) -> Result<()> {
 }
 
 /// Handler to download the file from command line
-fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> Result<()> {
+fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> Result<()> {
     if Path::new(outputfile).exists() {
         return Err(anyhow!("The output file {outputfile} already exists"));
     }
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
+    let mut pz = PartialZip::new_check_range(&url, check_range)?;
     #[cfg(feature = "progressbar")]
     let content = pz.download_with_progressbar(filename)?;
     #[cfg(not(feature = "progressbar"))]
@@ -46,9 +46,9 @@ fn download(url: &str, filename: &str, outputfile: &str, must_ranged: bool) -> R
 }
 
 /// Handler to download the file and pipe it to stdout
-fn pipe(url: &str, filename: &str, must_ranged: bool) -> Result<()> {
+fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, must_ranged)?;
+    let mut pz = PartialZip::new_check_range(&url, check_range)?;
     let content = pz.download(filename)?;
     std::io::stdout().write_all(&content)?;
     Ok(())

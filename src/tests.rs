@@ -212,7 +212,7 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
-    fn test_must_ranged_on_not_ranging_protocol() {
+    fn test_check_range_on_not_ranging_protocol() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
         let pz = PartialZip::new_check_range(&format!("file://localhost{}", d.display()), true);
