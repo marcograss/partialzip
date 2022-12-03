@@ -31,34 +31,19 @@ pub enum PartialZipError {
     UnsupportedCompression(u16),
     /// Error for the underlying zip crate
     #[error("zip error: {0}")]
-    ZipRsError(ZipError),
+    ZipRsError(#[from] ZipError),
+    /// `std::io::Error` wrapper
+    #[error("io error: {0}")]
+    IOError(#[from] io::Error),
     /// Error for CURL
     #[error("CURL error: {0}")]
-    CURLError(curl::Error),
+    CURLError(#[from] curl::Error),
     /// Generic catch all string error
     #[error("{0}")]
     GenericError(String),
 }
 
 // Error conversions to our crate type
-impl convert::From<ZipError> for PartialZipError {
-    fn from(err: ZipError) -> PartialZipError {
-        PartialZipError::ZipRsError(err)
-    }
-}
-
-impl convert::From<io::Error> for PartialZipError {
-    fn from(err: io::Error) -> PartialZipError {
-        PartialZipError::ZipRsError(ZipError::Io(err))
-    }
-}
-
-impl convert::From<curl::Error> for PartialZipError {
-    fn from(err: curl::Error) -> PartialZipError {
-        PartialZipError::CURLError(err)
-    }
-}
-
 impl convert::From<String> for PartialZipError {
     fn from(err: String) -> PartialZipError {
         PartialZipError::GenericError(err)
