@@ -2,7 +2,6 @@ use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
 use log::warn;
 use num_traits::ToPrimitive;
-use std::convert;
 use std::io;
 use std::io::BufReader;
 use std::io::ErrorKind;
@@ -38,30 +37,13 @@ pub enum PartialZipError {
     /// Error for CURL
     #[error("CURL error: {0}")]
     CURLError(#[from] curl::Error),
-    /// Generic catch all string error
-    #[error("{0}")]
-    GenericError(String),
+    /// NoError error
+    #[error("NoError error: {0}")]
+    NoError(#[from] NoError),
+    /// Conversion Error
+    #[error("Conversion error: {0}")]
+    ConvError(#[from] conv::PosOverflow<u64>),
 }
-
-// Error conversions to our crate type
-impl convert::From<String> for PartialZipError {
-    fn from(err: String) -> PartialZipError {
-        PartialZipError::GenericError(err)
-    }
-}
-
-impl convert::From<NoError> for PartialZipError {
-    fn from(err: NoError) -> PartialZipError {
-        PartialZipError::GenericError(err.to_string())
-    }
-}
-
-impl convert::From<conv::PosOverflow<u64>> for PartialZipError {
-    fn from(err: conv::PosOverflow<u64>) -> PartialZipError {
-        PartialZipError::GenericError(err.to_string())
-    }
-}
-// end error conversions
 
 /// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
