@@ -95,26 +95,23 @@ fn main() -> Result<()> {
         )
         .get_matches();
     let check_range = matches.get_flag("check_range");
-    if let Some(matches) = matches.subcommand_matches("list") {
-        list(
+    match matches.subcommand() {
+        Some(("list", matches)) => list(
             matches.get_one::<String>("url").unwrap(),
             matches.get_flag("files_only"),
             check_range,
-        )
-    } else if let Some(matches) = matches.subcommand_matches("download") {
-        download(
+        ),
+        Some(("download", matches)) => download(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
             matches.get_one::<String>("outputfile").unwrap(),
             check_range,
-        )
-    } else if let Some(matches) = matches.subcommand_matches("pipe") {
-        pipe(
+        ),
+        Some(("pipe", matches)) => pipe(
             matches.get_one::<String>("url").unwrap(),
             matches.get_one::<String>("filename").unwrap(),
             check_range,
-        )
-    } else {
-        Err(anyhow!("No command matched, try --help"))
+        ),
+        _ => Err(anyhow!("No command matched, try --help")),
     }
 }
