@@ -33,7 +33,7 @@ harness = false
 name = "pz_benchmark"
 
 [dependencies]
-anyhow = {version = "1.0.67", optional = true}
+anyhow = {version = "1.0.68", optional = true}
 bytesize = "1.1.0"
 clap = {version = "4.0.29", optional = true}
 conv = "0.3.3"
@@ -49,7 +49,7 @@ zip = "0.6.3"
 [dev-dependencies]
 actix-files = "0.6.2"
 actix-web = {version = "4.2.1", default-features = false, features = []}
-anyhow = "1.0.67"
+anyhow = "1.0.68"
 assert_cmd = "2.0.7"
 criterion = "0.4.0"
 predicates = "2.1.4"
