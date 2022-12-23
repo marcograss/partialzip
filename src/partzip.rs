@@ -160,6 +160,8 @@ pub struct PartialReader {
     pos: u64,
 }
 
+const HTTP_PARTIAL_CONTENT: u32 = 206;
+
 impl PartialReader {
     /// Creates a new [`PartialReader`]
     ///
@@ -191,7 +193,7 @@ impl PartialReader {
             .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
 
         if check_range {
-            // check if range-request is possible by request 1 byte. if 206 Partial Content is returned, we can make future request.
+            // check if range-request is possible by request 1 byte. if 206 Partial Content (HTTP_PARTIAL_CONTENT) is returned, we can make future request.
             easy.range("0-0")?;
             easy.nobody(true)?;
             easy.perform()?;
@@ -201,8 +203,8 @@ impl PartialReader {
             if head_size != 1 {
                 return Err(PartialZipError::RangeNotSupported);
             }
-            // 206 Partial Content
-            if easy.response_code()? != 206 {
+            // 206 Partial Content (HTTP_PARTIAL_CONTENT)
+            if easy.response_code()? != HTTP_PARTIAL_CONTENT {
                 return Err(PartialZipError::RangeNotSupported);
             }
             easy.range("")?;
