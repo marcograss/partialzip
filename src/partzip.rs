@@ -224,7 +224,9 @@ impl io::Read for PartialReader {
         if self.pos >= self.file_size {
             return Ok(0);
         }
+        // start = current position
         let start = self.pos;
+        // end candidate = start + buf.len() - 1;
         let maybe_end = start
             .checked_add(buf.len().to_u64().ok_or_else(|| {
                 std::io::Error::new(
@@ -245,6 +247,7 @@ impl io::Read for PartialReader {
                     format!("start + buf.len() - 1 underflow {start} {}", buf.len()),
                 )
             })?;
+        // end = min(end candidate, file_size - 1)
         let end = std::cmp::min(
             maybe_end,
             self.file_size.checked_sub(1).ok_or_else(|| {
@@ -254,10 +257,11 @@ impl io::Read for PartialReader {
                 )
             })?,
         );
+        // check if the end and start are valid ( end >= start )
         if end < start {
             return Err(std::io::Error::new(
                 ErrorKind::InvalidData,
-                format!("content_end < content_start {end} {start}"),
+                format!("end < start: {end} < {start}"),
             ));
         }
         let range = format!("{start}-{end}");
@@ -277,6 +281,7 @@ impl io::Read for PartialReader {
         };
 
         let n = io::Read::read(&mut content[..].as_ref(), buf)?;
+        // new position = position + read amount;
         self.pos = self
             .pos
             .checked_add(n.to_u64().ok_or_else(|| {
@@ -295,6 +300,7 @@ impl io::Read for PartialReader {
 
 impl io::Seek for PartialReader {
     fn seek(&mut self, style: io::SeekFrom) -> io::Result<u64> {
+        // we can seek both from start, end, or current position
         let (base_pos, offset) = match style {
             io::SeekFrom::Start(n) => {
                 self.pos = n;
@@ -305,16 +311,19 @@ impl io::Seek for PartialReader {
         };
 
         let new_pos = if offset >= 0 {
+            // position = base position + offset
             base_pos.checked_add(
                 u64::value_from(offset)
                     .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
             )
         } else {
+            // position = base position - offset
             base_pos.checked_sub(
                 u64::value_from(offset.wrapping_neg())
                     .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
             )
         };
+        // check if new position is valid
         match new_pos {
             Some(n) => {
                 self.pos = n;
