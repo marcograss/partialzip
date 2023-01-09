@@ -21,5 +21,5 @@ jobs:
       run: cargo hack --each-feature build --verbose
     - name: Cargo hack test
       run: cargo clean && cargo hack --each-feature test --verbose
-    - name: Clippy Pedantic
-      run: cargo clippy -- -D clippy::pedantic
+    - name: Clippy Pedantic and others
+      run: cargo clippy -- -D clippy::nursery -D clippy::all -D clippy::pedantic

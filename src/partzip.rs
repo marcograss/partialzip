@@ -73,7 +73,7 @@ impl PartialZip {
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        PartialZip::new_check_range(url, false)
+        Self::new_check_range(url, false)
     }
     /// Create a new [`PartialZip`]
     /// # Errors
@@ -168,7 +168,7 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        PartialReader::new_check_range(url, false)
+        Self::new_check_range(url, false)
     }
     /// Creates a new [`PartialReader`]
     ///
