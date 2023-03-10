@@ -42,7 +42,7 @@ env_logger = {version = "0.10.0", optional = true}
 indicatif = {version = "0.17.3", optional = true}
 log = "0.4.17"
 num-traits = "0.2.15"
-thiserror = "1.0.38"
+thiserror = "1.0.39"
 url = "2.3.1"
 zip = "0.6.4"
 
