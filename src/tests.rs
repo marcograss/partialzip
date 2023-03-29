@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod utils_tests {
     #[test]
+    /// Test bad and good URLs
     pub fn url_tests() {
         let valid_urls = [
             "http://www.test.com",
@@ -46,6 +47,7 @@ mod partzip_tests {
         address: Url,
     }
 
+    /// Spawn the test server which hosts the test files
     fn spawn_server() -> Result<TestServer> {
         // Bind to a random local port
         let listener = TcpListener::bind("127.0.0.1:0")?;
@@ -69,6 +71,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test the list functionality of the library
     async fn test_list() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -97,6 +100,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test the download functionality of the library
     async fn test_download() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -112,6 +116,7 @@ mod partzip_tests {
 
     #[cfg(feature = "progressbar")]
     #[tokio::test]
+    /// See if the code with the progress bar at least run
     async fn test_download_progressbar() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -126,6 +131,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test that downloading files that are not present in the archive throws an error
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -144,6 +150,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test that invalid zip archives are rejected
     async fn test_invalid_header() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -167,6 +174,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test that invalid URLs don't get through
     async fn test_invalid_url() -> Result<()> {
         spawn_server()?;
         tokio::task::spawn_blocking(move || {
@@ -185,6 +193,7 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
+    /// Test that we can open files over file:// not only http/https
     fn test_file_protocol() -> Result<()> {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
@@ -212,6 +221,7 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
+    /// Test that it throws an error when the range protocol is not supported
     fn test_check_range_on_not_ranging_protocol() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
@@ -223,6 +233,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test that the range header is correctly detected
     async fn test_range_support() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -235,6 +246,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Check if we follow redirects correctly
     async fn test_redirect() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {

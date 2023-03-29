@@ -2,7 +2,7 @@
 authors = ["marcograss"]
 categories = ["command-line-utilities", "compression", "encoding", "parsing", "parser-implementations"]
 default-run = "partialzip"
-description = "Download single files from online zip archives"
+description = "Download single files from online zip archives or list the content"
 documentation = "https://docs.rs/partialzip"
 edition = "2021"
 exclude = ["/testdata", "/.cargo"]

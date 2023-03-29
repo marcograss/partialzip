@@ -1,4 +1,5 @@
 #[cfg(feature = "cmdline")]
+/// Those are the tests for the CLI tool to see that everything works end to end and we didn't break the command line interface
 mod cli_tests {
     use anyhow::Result;
     use assert_cmd::prelude::*;

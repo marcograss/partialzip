@@ -40,7 +40,7 @@ docker run --rm marcograss/partialzip pipe http://yoururl/file.ipsw kernelcache.
 ```
 ## What is used for
 
-sometimes zip archives are huge and you just need a couple of files, for example, a kernelcache from an ipsw
+Sometimes zip archives are huge and you just need a couple of files, for example, a kernelcache from an ipsw
 
 ```
 ./target/release/partialzip download "http://XXXXX/iPhone10,6_11.1.2_15B202_Restore.ipsw" kernelcache.release.iphone10b kernelcache.release.iphone10b
@@ -48,7 +48,7 @@ sometimes zip archives are huge and you just need a couple of files, for example
 
 As you can see the time (and traffic) saved is significant.
 
-PartialZip only downloads the required chunks for your file, allowing you to download a few Mb instead of several Gb of the original IPSW.
+PartialZip only downloads the required chunks for your file, allowing you to download a few Mb instead of several Gb of the original archive.
 
 ## Prerequisites
 One prerequisite to be able to partially download zips from http servers is that the server support the Range Header. In this way you can request specific parts of the archive.
