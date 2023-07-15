@@ -4,7 +4,7 @@ arch:
   - arm64
 
 rust:
-  - 1.64.0 # MSRV
+  - 1.65.0 # MSRV
   - stable
   - beta
   - nightly
