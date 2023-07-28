@@ -7,6 +7,11 @@ mod cli_tests {
     use std::process::Command;
 
     #[test]
+    fn binary_exists() {
+        Command::cargo_bin("partialzip").expect("binary exists");
+    }
+
+    #[test]
     fn cli_flags_work() -> Result<()> {
         let mut cmd = Command::cargo_bin("partialzip")?;
         cmd.assert()
