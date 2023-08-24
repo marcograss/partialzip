@@ -6,14 +6,11 @@ on:
   pull_request:
     branches: [ "master" ]
 
-name: build
-
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   check:
-    name: Rust project
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
