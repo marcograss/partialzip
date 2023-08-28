@@ -43,7 +43,7 @@ indicatif = {version = "0.17.6", optional = true}
 log = "0.4.20"
 num-traits = "0.2.16"
 thiserror = "1.0.47"
-url = "2.4.0"
+url = "2.4.1"
 zip = {version = "0.6.6", default-features = false, features = ["bzip2", "deflate", "zstd"] }
 
 [dev-dependencies]
