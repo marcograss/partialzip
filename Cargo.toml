@@ -13,7 +13,7 @@ name = "partialzip"
 readme = "README.md"
 repository = "https://github.com/marcograss/partialzip"
 rust-version = "1.70.0"
-version = "2.1.0"
+version = "2.1.1"
 
 [features]
 cmdline = ["dep:anyhow", "dep:clap", "dep:env_logger"]
