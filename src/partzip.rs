@@ -1,6 +1,5 @@
 use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
-use log::warn;
 use num_traits::ToPrimitive;
 use std::io;
 use std::io::BufReader;
@@ -113,7 +112,7 @@ impl PartialZip {
                 Err(e) => {
                     // We are unable to get a file, let's try to continue,
                     // and at least return the files we can
-                    warn!("list: error while matching file by index: {} - {}", i, e);
+                    log::warn!("list: error while matching file by index: {} - {}", i, e);
                     continue;
                 }
             };
@@ -221,6 +220,7 @@ impl PartialReader {
 
 impl io::Read for PartialReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        log::trace!("read self.pos = {:x} self.file_size = {:x}", self.pos, self.file_size);
         if self.pos >= self.file_size {
             return Ok(0);
         }
@@ -247,6 +247,7 @@ impl io::Read for PartialReader {
                     format!("start + buf.len() - 1 underflow {start} {}", buf.len()),
                 )
             })?;
+        log::trace!("maybe_end = {maybe_end:x}");
         // end = min(end candidate, file_size - 1)
         let end = std::cmp::min(
             maybe_end,
@@ -257,6 +258,7 @@ impl io::Read for PartialReader {
                 )
             })?,
         );
+        log::trace!("end = {end:x} start = {start:x}");
         // check if the end and start are valid ( end >= start )
         if end < start {
             return Err(std::io::Error::new(
@@ -265,6 +267,7 @@ impl io::Read for PartialReader {
             ));
         }
         let range = format!("{start}-{end}");
+        log::trace!("range = {range}");
 
         self.easy.range(&range)?;
         self.easy.get(true)?;
@@ -273,6 +276,7 @@ impl io::Read for PartialReader {
         {
             let mut transfer = self.easy.transfer();
             transfer.write_function(|data| {
+                log::trace!("transfered {:x} bytes", data.len());
                 content.extend_from_slice(data);
                 Ok(data.len())
             })?;
@@ -293,7 +297,7 @@ impl io::Read for PartialReader {
                     format!("adding {n} overflows the reader position {}", self.pos),
                 )
             })?;
-
+        log::trace!("new self.pos = {:x}", self.pos);
         Ok(n)
     }
 }
@@ -309,7 +313,7 @@ impl io::Seek for PartialReader {
             io::SeekFrom::End(n) => (self.file_size, n),
             io::SeekFrom::Current(n) => (self.pos, n),
         };
-
+        log::trace!("seek base_pos = {base_pos:x} offset = {offset:x}");
         let new_pos = if offset >= 0 {
             // position = base position + offset
             base_pos.checked_add(
@@ -327,6 +331,7 @@ impl io::Seek for PartialReader {
         match new_pos {
             Some(n) => {
                 self.pos = n;
+                log::trace!("new self.pos = {n:x}");
                 Ok(self.pos)
             }
             None => Err(std::io::Error::new(
