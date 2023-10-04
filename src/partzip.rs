@@ -5,6 +5,7 @@ use std::io;
 use std::io::BufReader;
 use std::io::ErrorKind;
 use std::io::Read;
+use std::time::Duration;
 use thiserror::Error;
 use zip::result::ZipError;
 
@@ -183,6 +184,9 @@ impl PartialReader {
         let mut easy = Easy::new();
         easy.url(url)?;
         easy.follow_location(true)?;
+        easy.tcp_keepalive(true)?;
+        easy.tcp_keepidle(Duration::from_secs(120))?;
+        easy.tcp_keepintvl(Duration::from_secs(60))?;
         easy.nobody(true)?;
         easy.write_function(|data| Ok(data.len()))?;
         easy.perform()?;
@@ -220,7 +224,11 @@ impl PartialReader {
 
 impl io::Read for PartialReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        log::trace!("read self.pos = {:x} self.file_size = {:x}", self.pos, self.file_size);
+        log::trace!(
+            "read self.pos = {:x} self.file_size = {:x}",
+            self.pos,
+            self.file_size
+        );
         if self.pos >= self.file_size {
             return Ok(0);
         }
