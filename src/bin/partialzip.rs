@@ -8,22 +8,25 @@ use std::path::Path;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, files_only: bool, check_range: bool) -> Result<()> {
+fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
     let mut pz = PartialZip::new_check_range(&url, check_range)?;
-    let file_list = pz.list();
-    for f in file_list {
-        let descr = if files_only {
-            f.name
-        } else {
-            format!(
+    if detailed {
+        let file_list = pz.list_detailed();
+        for f in file_list {
+            let descr = format!(
                 "{} - {} - Supported: {}",
                 f.name,
                 ByteSize(f.compressed_size),
                 f.supported
-            )
-        };
-        println!("{descr}");
+            );
+            println!("{descr}");
+        }
+    } else {
+        let file_list = pz.list_names();
+        for f in file_list {
+            println!("{f}");
+        }
     }
     Ok(())
 }
@@ -72,11 +75,11 @@ fn main() -> Result<()> {
             Command::new("list")
                 .about("list the files inside the zip")
                 .arg(
-                    Arg::new("files_only")
-                        .short('f')
+                    Arg::new("detailed")
+                        .short('d')
                         .action(ArgAction::SetTrue)
                         .required(false)
-                        .help("list files only, not size and support"),
+                        .help("list file size and support not only names"),
                 )
                 .arg(Arg::new("url").required(true).help("url of the zip file")),
         )
@@ -98,7 +101,7 @@ fn main() -> Result<()> {
     match matches.subcommand() {
         Some(("list", matches)) => list(
             matches.get_one::<String>("url").unwrap(),
-            matches.get_flag("files_only"),
+            matches.get_flag("detailed"),
             check_range,
         ),
         Some(("download", matches)) => download(

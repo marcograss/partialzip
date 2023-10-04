@@ -58,7 +58,7 @@ mod cli_tests {
         let target_arg = format!("file://localhost{}", d.display());
 
         let mut cmd = Command::cargo_bin("partialzip")?;
-        cmd.arg("list").arg(&target_arg);
+        cmd.arg("list").arg("-d").arg(&target_arg);
         cmd.assert().success().stdout(
             predicate::str::is_match(
                 "1.txt - 7 B - Supported: true\n2.txt - 7 B - Supported: true\n",
@@ -67,7 +67,7 @@ mod cli_tests {
         );
 
         let mut cmd = Command::cargo_bin("partialzip")?;
-        cmd.arg("list").arg("-f").arg(&target_arg);
+        cmd.arg("list").arg(&target_arg);
 
         cmd.assert()
             .success()

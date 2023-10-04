@@ -56,7 +56,7 @@ pub struct PartialZip {
 
 /// Struct for a file in the zip file with some attributes
 #[derive(Debug, PartialEq, Eq)]
-pub struct PartialZipFile {
+pub struct PartialZipFileDetailed {
     /// Filename
     pub name: String,
     /// Compressed size of the file
@@ -88,8 +88,18 @@ impl PartialZip {
             archive,
         })
     }
-    /// Get a list of the files in the archive
-    pub fn list(&mut self) -> Vec<PartialZipFile> {
+
+    /// Get a list of the filenames in the archive
+    pub fn list_names(&mut self) -> Vec<String> {
+        let mut file_list = Vec::new();
+        for n in self.archive.file_names() {
+            file_list.push(n.to_owned());
+        }
+        file_list
+    }
+
+    /// Get a list of the files in the archive with details (slow)
+    pub fn list_detailed(&mut self) -> Vec<PartialZipFileDetailed> {
         let mut file_list = Vec::new();
         for i in 0..self.archive.len() {
             match self.archive.by_index(i) {
@@ -102,7 +112,7 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    let pzf = PartialZipFile {
+                    let pzf = PartialZipFileDetailed {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
                         compression_method,

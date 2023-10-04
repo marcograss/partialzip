@@ -12,7 +12,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             d.push("testdata/test.zip");
             let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))
                 .expect("cannot create PartialZip in benchmark");
-            let _list = pz.list();
+            let _list = pz.list_detailed();
             let _download = pz.download("1.txt");
         });
     });

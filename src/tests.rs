@@ -39,7 +39,7 @@ mod partzip_tests {
 
     use actix_web::{App, HttpResponse, HttpServer};
 
-    use crate::partzip::{PartialZip, PartialZipError, PartialZipFile};
+    use crate::partzip::{PartialZip, PartialZipError, PartialZipFileDetailed};
 
     use anyhow::Result;
 
@@ -76,17 +76,17 @@ mod partzip_tests {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/files/test.zip")?)?;
-            let list = pz.list();
+            let list = pz.list_detailed();
             assert_eq!(
                 list,
                 vec![
-                    PartialZipFile {
+                    PartialZipFileDetailed {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated,
                         supported: true
                     },
-                    PartialZipFile {
+                    PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated,
@@ -198,17 +198,17 @@ mod partzip_tests {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
         let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))?;
-        let list = pz.list();
+        let list = pz.list_detailed();
         assert_eq!(
             list,
             vec![
-                PartialZipFile {
+                PartialZipFileDetailed {
                     name: "1.txt".to_string(),
                     compressed_size: 7,
                     compression_method: zip::CompressionMethod::Deflated,
                     supported: true
                 },
-                PartialZipFile {
+                PartialZipFileDetailed {
                     name: "2.txt".to_string(),
                     compressed_size: 7,
                     compression_method: zip::CompressionMethod::Deflated,
@@ -251,17 +251,17 @@ mod partzip_tests {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let mut pz = PartialZip::new(&address.join("/redirect")?)?;
-            let list = pz.list();
+            let list = pz.list_detailed();
             assert_eq!(
                 list,
                 vec![
-                    PartialZipFile {
+                    PartialZipFileDetailed {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated,
                         supported: true
                     },
-                    PartialZipFile {
+                    PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated,
