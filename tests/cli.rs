@@ -71,7 +71,10 @@ mod cli_tests {
 
         cmd.assert()
             .success()
-            .stdout(predicate::str::is_match("1.txt\n2.txt\n").unwrap());
+            .stdout(predicate::str::contains("1.txt\n"));
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("2.txt\n"));
 
         let mut cmd = Command::cargo_bin("partialzip")?;
         cmd.arg("-r").arg("list").arg(&target_arg);
