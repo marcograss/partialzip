@@ -81,7 +81,7 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new_check_range(url, check_range)?;
-        let bufreader = BufReader::new(reader);
+        let bufreader = BufReader::with_capacity(0x0010_0000, reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(Self {
             url: url.to_string(),
