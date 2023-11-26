@@ -4,7 +4,6 @@ use num_traits::ToPrimitive;
 use std::io;
 use std::io::BufReader;
 use std::io::ErrorKind;
-use std::io::Read;
 use std::time::Duration;
 use thiserror::Error;
 use zip::result::ZipError;
@@ -135,10 +134,23 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let mut file = self.archive.by_name(filename)?;
-        let mut content = Vec::with_capacity(usize::value_from(file.compressed_size())?);
-        file.read_to_end(&mut content)?;
+        let mut content: Vec<u8> = Vec::new();
+        self.download_to_write(filename, &mut content)?;
         Ok(content)
+    }
+
+    /// Download a single file from the archive and writes it to a [`std::io::Write`]
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] depending on what happened
+    pub fn download_to_write(
+        &mut self,
+        filename: &str,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<(), PartialZipError> {
+        let mut file = self.archive.by_name(filename)?;
+        io::copy(&mut file, writer)?;
+        Ok(())
     }
 
     /// Download a single file from the archive showing a progress bar
@@ -150,13 +162,27 @@ impl PartialZip {
         &mut self,
         filename: &str,
     ) -> Result<Vec<u8>, PartialZipError> {
+        let mut content: Vec<u8> = Vec::new();
+        self.download_to_write_with_progressbar(filename, &mut content)?;
+        Ok(content)
+    }
+
+    /// Download a single file from the archive showing a progress bar to a [`std::io::Write`]
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] depending on what happened
+    #[cfg(feature = "progressbar")]
+    pub fn download_to_write_with_progressbar(
+        &mut self,
+        filename: &str,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<(), PartialZipError> {
         use indicatif::ProgressBar;
 
         let file = self.archive.by_name(filename)?;
-        let mut content = Vec::with_capacity(usize::value_from(file.compressed_size())?);
         let pb = ProgressBar::new(file.compressed_size());
-        io::copy(&mut pb.wrap_read(file), &mut content)?;
-        Ok(content)
+        io::copy(&mut pb.wrap_read(file), writer)?;
+        Ok(())
     }
 }
 

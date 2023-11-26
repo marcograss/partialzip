@@ -3,7 +3,6 @@ use bytesize::ByteSize;
 use clap::{Arg, ArgAction, Command};
 use partialzip::partzip::PartialZip;
 use std::fs::File;
-use std::io::prelude::*;
 use std::path::Path;
 use url::Url;
 
@@ -38,12 +37,11 @@ fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> R
     }
     let url = Url::parse(url)?;
     let mut pz = PartialZip::new_check_range(&url, check_range)?;
-    #[cfg(feature = "progressbar")]
-    let content = pz.download_with_progressbar(filename)?;
-    #[cfg(not(feature = "progressbar"))]
-    let content = pz.download(filename)?;
     let mut f = File::create(outputfile)?;
-    f.write_all(&content)?;
+    #[cfg(feature = "progressbar")]
+    pz.download_to_write_with_progressbar(filename, &mut f)?;
+    #[cfg(not(feature = "progressbar"))]
+    pz.download_to_write(filename, &mut f)?;
     println!("{filename} extracted to {outputfile}");
     Ok(())
 }
@@ -52,8 +50,7 @@ fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> R
 fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
     let mut pz = PartialZip::new_check_range(&url, check_range)?;
-    let content = pz.download(filename)?;
-    std::io::stdout().write_all(&content)?;
+    pz.download_to_write(filename, &mut std::io::stdout())?;
     Ok(())
 }
 
