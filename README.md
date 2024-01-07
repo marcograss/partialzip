@@ -61,6 +61,9 @@ cargo run -- -r list http://yoururl/yourfile.zip
 If you want to use partialzip as a library and you want to reduce the binary size, you can choose in your `Cargo.toml` the flag `default-features = false` in the partialzip dependency.
 This will not build the command line of partialzip which is not required to use it as a library, and it will avoid including some unnecessary dependencies and save space.
 
+## rustls
+You can avoid using openssl by enabling the `rustls` feature to avoid the dependency
+
 ## Showcases
 
 - [Google Project Zero Blogpost: The curious tale of a fake Carrier.app](https://googleprojectzero.blogspot.com/2022/06/curious-case-carrier-app.html) - partialzip was used to efficiently download as many versions as possible of the DCP firmware from the iOS ipsws.
