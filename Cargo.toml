@@ -42,17 +42,17 @@ curl = {version = "0.4.44", default-features = false}
 env_logger = {version = "0.11.1", optional = true}
 indicatif = {version = "0.17.7", optional = true}
 log = "0.4.20"
-num-traits = "0.2.17"
+num-traits = "0.2.18"
 thiserror = "1.0.56"
 url = "2.5.0"
 zip = {version = "0.6.6", default-features = false, features = ["bzip2", "deflate", "zstd"]}
 
 [dev-dependencies]
 actix-files = "0.6.5"
-actix-web = {version = "4.4.1", default-features = false, features = []}
+actix-web = {version = "4.5.1", default-features = false, features = []}
 anyhow = "1.0.79"
 assert_cmd = "2.0.13"
 criterion = "0.5.1"
 predicates = "3.1.0"
-tempfile = "3.9.0"
+tempfile = "3.10.0"
 tokio = {version = "1.36.0", features = ["macros", "rt-multi-thread"]}
