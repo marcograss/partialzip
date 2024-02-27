@@ -54,5 +54,5 @@ anyhow = "1.0.80"
 assert_cmd = "2.0.14"
 criterion = "0.5.1"
 predicates = "3.1.0"
-tempfile = "3.10.0"
+tempfile = "3.10.1"
 tokio = {version = "1.36.0", features = ["macros", "rt-multi-thread"]}
