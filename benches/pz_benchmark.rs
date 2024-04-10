@@ -1,6 +1,8 @@
 #![cfg(unix)]
 use criterion::{criterion_group, criterion_main, Criterion};
 
+/// # Panics
+/// Can panic while creating the `PartialZip` archive
 pub fn criterion_benchmark(c: &mut Criterion) {
     use std::path::PathBuf;
 
