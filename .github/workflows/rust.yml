@@ -22,4 +22,4 @@ jobs:
     - name: Cargo hack test
       run: cargo clean && cargo hack --each-feature test --verbose
     - name: Clippy Pedantic and others
-      run: cargo clippy -- -D clippy::nursery -D clippy::all -D clippy::pedantic
+      run: cargo clippy --all-targets --all-features -- -D clippy::nursery -D clippy::all -D clippy::pedantic
