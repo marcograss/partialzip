@@ -16,7 +16,7 @@ mod cli_tests {
         let mut cmd = Command::cargo_bin("partialzip")?;
         cmd.assert()
             .failure()
-            .stderr(predicate::str::contains("No command matched"));
+            .stderr(predicate::str::contains("Usage"));
         cmd.arg("--help");
         cmd.assert()
             .success()

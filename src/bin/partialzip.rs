@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
-use clap::{Arg, ArgAction, Command};
+use clap::{Parser, Subcommand};
 use partialzip::partzip::PartialZip;
 use std::fs::File;
 use std::path::Path;
@@ -54,64 +54,47 @@ fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
     Ok(())
 }
 
+#[derive(Parser)]
+#[command(version, about)]
+struct Cli {
+    /// Require using url with range support
+    #[arg(short = 'r', long)]
+    check_range: bool,
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// list file size and support not only names
+    List {
+        /// list file size and support not only names
+        #[arg(short = 'd', long)]
+        detailed: bool,
+        /// url of the zip file
+        url: String,
+    },
+    /// download a file from the zip
+    Download {
+        url: String,
+        filename: String,
+        outputfile: String,
+    },
+    /// stream a file from the zip to stdout
+    Pipe { url: String, filename: String },
+}
+
 fn main() -> Result<()> {
     env_logger::init();
 
-    let matches = Command::new(env!("CARGO_PKG_NAME"))
-        .version(env!("CARGO_PKG_VERSION"))
-        .author(env!("CARGO_PKG_AUTHORS"))
-        .about(env!("CARGO_PKG_DESCRIPTION"))
-        .arg(
-            Arg::new("check_range")
-                .short('r')
-                .action(ArgAction::SetTrue)
-                .required(false)
-                .help("Require using url with range support"),
-        )
-        .subcommand(
-            Command::new("list")
-                .about("list the files inside the zip")
-                .arg(
-                    Arg::new("detailed")
-                        .short('d')
-                        .action(ArgAction::SetTrue)
-                        .required(false)
-                        .help("list file size and support not only names"),
-                )
-                .arg(Arg::new("url").required(true).help("url of the zip file")),
-        )
-        .subcommand(
-            Command::new("download")
-                .about("download a file from the zip")
-                .arg(Arg::new("url").required(true).index(1))
-                .arg(Arg::new("filename").required(true).index(2))
-                .arg(Arg::new("outputfile").required(true).index(3)),
-        )
-        .subcommand(
-            Command::new("pipe")
-                .about("stream a file from the zip to stdout")
-                .arg(Arg::new("url").required(true).index(1))
-                .arg(Arg::new("filename").required(true).index(2)),
-        )
-        .get_matches();
-    let check_range = matches.get_flag("check_range");
-    match matches.subcommand() {
-        Some(("list", matches)) => list(
-            matches.get_one::<String>("url").unwrap(),
-            matches.get_flag("detailed"),
-            check_range,
-        ),
-        Some(("download", matches)) => download(
-            matches.get_one::<String>("url").unwrap(),
-            matches.get_one::<String>("filename").unwrap(),
-            matches.get_one::<String>("outputfile").unwrap(),
-            check_range,
-        ),
-        Some(("pipe", matches)) => pipe(
-            matches.get_one::<String>("url").unwrap(),
-            matches.get_one::<String>("filename").unwrap(),
-            check_range,
-        ),
-        _ => Err(anyhow!("No command matched, try --help")),
+    let cli = Cli::parse();
+    match cli.command {
+        Commands::List { detailed, url } => list(&url, detailed, cli.check_range),
+        Commands::Download {
+            url,
+            filename,
+            outputfile,
+        } => download(&url, &filename, &outputfile, cli.check_range),
+        Commands::Pipe { url, filename } => pipe(&url, &filename, cli.check_range),
     }
 }
