@@ -11,21 +11,16 @@ fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
     let mut pz = PartialZip::new_check_range(&url, check_range)?;
     if detailed {
-        let file_list = pz.list_detailed();
-        for f in file_list {
-            let descr = format!(
+        pz.list_detailed().into_iter().for_each(|f| {
+            println!(
                 "{} - {} - Supported: {}",
                 f.name,
                 ByteSize(f.compressed_size),
                 f.supported
             );
-            println!("{descr}");
-        }
+        });
     } else {
-        let file_list = pz.list_names();
-        for f in file_list {
-            println!("{f}");
-        }
+        pz.list_names().into_iter().for_each(|f| println!("{f}"));
     }
     Ok(())
 }

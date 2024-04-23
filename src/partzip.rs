@@ -90,11 +90,7 @@ impl PartialZip {
 
     /// Get a list of the filenames in the archive
     pub fn list_names(&mut self) -> Vec<String> {
-        let mut file_list = Vec::new();
-        for n in self.archive.file_names() {
-            file_list.push(n.to_owned());
-        }
-        file_list
+        self.archive.file_names().map(std::borrow::ToOwned::to_owned).collect()
     }
 
     /// Get a list of the files in the archive with details (slow)
