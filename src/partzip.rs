@@ -36,7 +36,7 @@ pub enum PartialZipError {
     /// Error for CURL
     #[error("CURL error: {0}")]
     CURLError(#[from] curl::Error),
-    /// NoError error
+    /// `NoError` error
     #[error("NoError error: {0}")]
     NoError(#[from] NoError),
     /// Conversion Error
@@ -90,7 +90,10 @@ impl PartialZip {
 
     /// Get a list of the filenames in the archive
     pub fn list_names(&mut self) -> Vec<String> {
-        self.archive.file_names().map(std::borrow::ToOwned::to_owned).collect()
+        self.archive
+            .file_names()
+            .map(std::borrow::ToOwned::to_owned)
+            .collect()
     }
 
     /// Get a list of the files in the archive with details (slow)
