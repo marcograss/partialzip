@@ -221,6 +221,18 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
+    /// Test that the url getter works
+    fn test_url_getter() -> Result<()> {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("testdata/test.zip");
+        let url = format!("file://localhost{}", d.display());
+        let pz = PartialZip::new(&url)?;
+        assert_eq!(url, pz.url());
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
     /// Test that it throws an error when the range protocol is not supported
     fn test_check_range_on_not_ranging_protocol() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

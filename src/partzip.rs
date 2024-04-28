@@ -49,9 +49,9 @@ pub enum PartialZipError {
 #[derive(Debug)]
 pub struct PartialZip {
     /// URL of the zip archive
-    pub url: String,
+    url: String,
     /// The archive object
-    pub archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
+    archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
 }
 
 /// Struct for a file in the zip file with some attributes
@@ -75,6 +75,7 @@ impl PartialZip {
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
         Self::new_check_range(url, false)
     }
+
     /// Create a new [`PartialZip`]
     /// # Errors
     ///
@@ -87,6 +88,11 @@ impl PartialZip {
             url: url.to_string(),
             archive: RefCell::new(archive),
         })
+    }
+
+    /// Returns the url for the [`PartialZip`]
+    pub fn url(&self) -> String {
+        self.url.clone()
     }
 
     /// Get a list of the filenames in the archive
@@ -191,7 +197,7 @@ impl PartialZip {
 #[derive(Debug)]
 pub struct PartialReader {
     /// URL at which we read the file
-    pub url: String,
+    url: String,
     file_size: u64,
     easy: Easy,
     pos: u64,
@@ -256,6 +262,11 @@ impl PartialReader {
             easy,
             pos: 0,
         })
+    }
+
+    /// Returns the url for the [`PartialReader`]
+    pub fn url(&self) -> String {
+        self.url.clone()
     }
 }
 
