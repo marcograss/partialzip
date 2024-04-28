@@ -1,6 +1,7 @@
 use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
 use num_traits::ToPrimitive;
+use std::cell::RefCell;
 use std::io;
 use std::io::BufReader;
 use std::io::ErrorKind;
@@ -50,7 +51,7 @@ pub struct PartialZip {
     /// URL of the zip archive
     pub url: String,
     /// The archive object
-    pub archive: ZipArchive<BufReader<PartialReader>>,
+    pub archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
 }
 
 /// Struct for a file in the zip file with some attributes
@@ -84,23 +85,25 @@ impl PartialZip {
         let archive = ZipArchive::new(bufreader)?;
         Ok(Self {
             url: url.to_string(),
-            archive,
+            archive: RefCell::new(archive),
         })
     }
 
     /// Get a list of the filenames in the archive
-    pub fn list_names(&mut self) -> Vec<String> {
+    pub fn list_names(&self) -> Vec<String> {
         self.archive
+            .borrow()
             .file_names()
             .map(std::borrow::ToOwned::to_owned)
             .collect()
     }
 
     /// Get a list of the files in the archive with details (slow)
-    pub fn list_detailed(&mut self) -> Vec<PartialZipFileDetailed> {
+    pub fn list_detailed(&self) -> Vec<PartialZipFileDetailed> {
         let mut file_list = Vec::new();
-        for i in 0..self.archive.len() {
-            match self.archive.by_index(i) {
+        let num_files = self.archive.borrow().len();
+        for i in 0..num_files {
+            match self.archive.borrow_mut().by_index(i) {
                 Ok(file) => {
                     let compression_method = file.compression();
                     let supported = matches!(
@@ -132,7 +135,7 @@ impl PartialZip {
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
-    pub fn download(&mut self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
+    pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut content: Vec<u8> = Vec::new();
         self.download_to_write(filename, &mut content)?;
         Ok(content)
@@ -143,11 +146,12 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download_to_write(
-        &mut self,
+        &self,
         filename: &str,
         writer: &mut dyn std::io::Write,
     ) -> Result<(), PartialZipError> {
-        let mut file = self.archive.by_name(filename)?;
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name(filename)?;
         io::copy(&mut file, writer)?;
         Ok(())
     }
@@ -157,10 +161,7 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
-    pub fn download_with_progressbar(
-        &mut self,
-        filename: &str,
-    ) -> Result<Vec<u8>, PartialZipError> {
+    pub fn download_with_progressbar(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
         let mut content: Vec<u8> = Vec::new();
         self.download_to_write_with_progressbar(filename, &mut content)?;
         Ok(content)
@@ -172,13 +173,14 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
     pub fn download_to_write_with_progressbar(
-        &mut self,
+        &self,
         filename: &str,
         writer: &mut dyn std::io::Write,
     ) -> Result<(), PartialZipError> {
         use indicatif::ProgressBar;
 
-        let file = self.archive.by_name(filename)?;
+        let mut archive = self.archive.borrow_mut();
+        let file = archive.by_name(filename)?;
         let pb = ProgressBar::new(file.compressed_size());
         io::copy(&mut pb.wrap_read(file), writer)?;
         Ok(())

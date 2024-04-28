@@ -12,7 +12,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             d.push("testdata/test.zip");
-            let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))
+            let pz = PartialZip::new(&format!("file://localhost{}", d.display()))
                 .expect("cannot create PartialZip in benchmark detailed");
             let _list = pz.list_detailed();
         });
@@ -22,7 +22,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             d.push("testdata/test.zip");
-            let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))
+            let pz = PartialZip::new(&format!("file://localhost{}", d.display()))
                 .expect("cannot create PartialZip in benchmark");
             let _list = pz.list_names();
         });
@@ -32,7 +32,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             d.push("testdata/test.zip");
-            let mut pz = PartialZip::new(&format!("file://localhost{}", d.display()))
+            let pz = PartialZip::new(&format!("file://localhost{}", d.display()))
                 .expect("cannot create PartialZip in benchmark download");
             let _download = pz.download("1.txt");
         });

@@ -9,7 +9,7 @@ use url::Url;
 /// Handler to list the files from command line
 fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, check_range)?;
+    let pz = PartialZip::new_check_range(&url, check_range)?;
     if detailed {
         pz.list_detailed().into_iter().for_each(|f| {
             println!(
@@ -31,7 +31,7 @@ fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> R
         return Err(anyhow!("The output file {outputfile} already exists"));
     }
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, check_range)?;
+    let pz = PartialZip::new_check_range(&url, check_range)?;
     let mut f = File::create(outputfile)?;
     #[cfg(feature = "progressbar")]
     pz.download_to_write_with_progressbar(filename, &mut f)?;
@@ -44,7 +44,7 @@ fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> R
 /// Handler to download the file and pipe it to stdout
 fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
     let url = Url::parse(url)?;
-    let mut pz = PartialZip::new_check_range(&url, check_range)?;
+    let pz = PartialZip::new_check_range(&url, check_range)?;
     pz.download_to_write(filename, &mut std::io::stdout())?;
     Ok(())
 }
