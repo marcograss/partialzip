@@ -265,6 +265,7 @@ impl PartialReader {
     }
 
     /// Returns the url for the [`PartialReader`]
+    #[must_use]
     pub fn url(&self) -> String {
         self.url.clone()
     }
