@@ -100,7 +100,7 @@ mod cli_tests {
             .arg(&output_file);
         cmd.assert()
             .failure()
-            .stderr(predicate::str::contains("already exists"));
+            .stderr(predicate::str::contains("File exists"));
 
         fs::remove_file(&output_file)?;
 

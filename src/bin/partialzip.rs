@@ -1,9 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use bytesize::ByteSize;
 use clap::{Parser, Subcommand};
 use partialzip::partzip::PartialZip;
 use std::fs::File;
-use std::path::Path;
 use url::Url;
 
 /// Handler to list the files from command line
@@ -27,12 +26,9 @@ fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
 
 /// Handler to download the file from command line
 fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> Result<()> {
-    if Path::new(outputfile).exists() {
-        return Err(anyhow!("The output file {outputfile} already exists"));
-    }
     let url = Url::parse(url)?;
     let pz = PartialZip::new_check_range(&url, check_range)?;
-    let mut f = File::create(outputfile)?;
+    let mut f = File::create_new(outputfile)?;
     #[cfg(feature = "progressbar")]
     pz.download_to_write_with_progressbar(filename, &mut f)?;
     #[cfg(not(feature = "progressbar"))]
