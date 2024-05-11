@@ -5,8 +5,23 @@
 //!
 //! It fetches first the zip data structures and then download only the
 //! relevant parts of the archive and proceed to decompress it.
+//! # Examples
+//! ```no_run
+//! use partialzip::PartialZip;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let pz = PartialZip::new(&"https://your_url")?;
+//!     let files = pz.list_names();
+//!     let content = pz.download(&"yourfile")?;
+//!     Ok(())
+//! }
+//! ```
 /// Core module for the partialzip crate
 pub mod partzip;
+pub use partzip::PartialReader;
+pub use partzip::PartialZip;
+pub use partzip::PartialZipError;
+pub use partzip::PartialZipFileDetailed;
 /// Small utilities mostly for URLs
 mod utils;
 
