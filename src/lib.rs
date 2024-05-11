@@ -8,6 +8,6 @@
 /// Core module for the partialzip crate
 pub mod partzip;
 /// Small utilities mostly for URLs
-pub mod utils;
+mod utils;
 
 mod tests;
