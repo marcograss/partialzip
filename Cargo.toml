@@ -45,7 +45,7 @@ log = "0.4.21"
 num-traits = "0.2.19"
 thiserror = "1.0.60"
 url = "2.5.0"
-zip = {version = "1.2.1", default-features = false, features = ["bzip2", "deflate", "zstd"]}
+zip = {version = "1.2.3", default-features = false, features = ["bzip2", "deflate", "zstd"]}
 
 [dev-dependencies]
 actix-files = "0.6.5"
