@@ -82,6 +82,7 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new_check_range(url, check_range)?;
+        // higher capacity BufReader has better performances
         let bufreader = BufReader::with_capacity(0x0010_0000, reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(Self {
@@ -112,6 +113,7 @@ impl PartialZip {
             match self.archive.borrow_mut().by_index(i) {
                 Ok(file) => {
                     let compression_method = file.compression();
+                    // we only support some compressions
                     let supported = matches!(
                         compression_method,
                         zip::CompressionMethod::Stored
@@ -130,7 +132,7 @@ impl PartialZip {
                 Err(e) => {
                     // We are unable to get a file, let's try to continue,
                     // and at least return the files we can
-                    log::warn!("list: error while matching file by index: {} - {}", i, e);
+                    log::warn!("list: error while matching file by index: {i} - {e}");
                     continue;
                 }
             };
