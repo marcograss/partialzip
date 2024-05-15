@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bytesize::ByteSize;
 use clap::{Parser, Subcommand};
 use partialzip::partzip::PartialZip;
@@ -7,8 +7,9 @@ use url::Url;
 
 /// Handler to list the files from command line
 fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
-    let url = Url::parse(url)?;
-    let pz = PartialZip::new_check_range(&url, check_range)?;
+    let url = Url::parse(url).context("invalid URL for listing")?;
+    let pz = PartialZip::new_check_range(&url, check_range)
+        .context("Cannot create PartialZip instance for listing")?;
     if detailed {
         pz.list_detailed().into_iter().for_each(|f| {
             println!(
@@ -26,22 +27,27 @@ fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
 
 /// Handler to download the file from command line
 fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> Result<()> {
-    let url = Url::parse(url)?;
-    let pz = PartialZip::new_check_range(&url, check_range)?;
-    let mut f = File::create_new(outputfile)?;
+    let url = Url::parse(url).context("invalid URL for downloading")?;
+    let pz = PartialZip::new_check_range(&url, check_range)
+        .context("Cannot create PartialZip instance for downloading")?;
+    let mut f = File::create_new(outputfile).context("cannot create the output file")?;
     #[cfg(feature = "progressbar")]
-    pz.download_to_write_with_progressbar(filename, &mut f)?;
+    pz.download_to_write_with_progressbar(filename, &mut f)
+        .context("download failed")?;
     #[cfg(not(feature = "progressbar"))]
-    pz.download_to_write(filename, &mut f)?;
+    pz.download_to_write(filename, &mut f)
+        .context("download failed")?;
     println!("{filename} extracted to {outputfile}");
     Ok(())
 }
 
 /// Handler to download the file and pipe it to stdout
 fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
-    let url = Url::parse(url)?;
-    let pz = PartialZip::new_check_range(&url, check_range)?;
-    pz.download_to_write(filename, &mut std::io::stdout())?;
+    let url = Url::parse(url).context("invalid URL for piping")?;
+    let pz = PartialZip::new_check_range(&url, check_range)
+        .context("Cannot create PartialZip instance for piping")?;
+    pz.download_to_write(filename, &mut std::io::stdout())
+        .context("download failed")?;
     Ok(())
 }
 
