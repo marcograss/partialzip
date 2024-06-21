@@ -44,12 +44,12 @@ indicatif = {version = "0.17.8", optional = true}
 log = "0.4.21"
 num-traits = "0.2.19"
 thiserror = "1.0.61"
-url = "2.5.1"
+url = "2.5.2"
 zip = {version = "2.1.3", default-features = false, features = ["bzip2", "deflate", "zstd"]}
 
 [dev-dependencies]
 actix-files = "0.6.6"
-actix-web = {version = "4.7.0", default-features = false, features = []}
+actix-web = {version = "4.8.0", default-features = false, features = []}
 anyhow = "1.0.86"
 assert_cmd = "2.0.14"
 criterion = "0.5.1"
