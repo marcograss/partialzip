@@ -55,4 +55,4 @@ assert_cmd = "2.0.14"
 criterion = "0.5.1"
 predicates = "3.1.0"
 tempfile = "3.10.1"
-tokio = {version = "1.38.0", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "1.38.1", features = ["macros", "rt-multi-thread"]}
