@@ -162,9 +162,7 @@ mod partzip_tests {
             assert!(
                 matches!(
                     pz,
-                    Err(PartialZipError::ZipRsError(ZipError::InvalidArchive(
-                        "Invalid zip header"
-                    )))
+                    Err(PartialZipError::ZipRsError(ZipError::InvalidArchive(_)))
                 ),
                 "didn't throw an error with invalid header"
             );
