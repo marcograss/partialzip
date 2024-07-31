@@ -3,6 +3,9 @@ name: Publish Docker image
 on:
   release:
     types: [published]
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   push_to_registry:
