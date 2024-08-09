@@ -36,7 +36,7 @@ name = "pz_benchmark"
 [dependencies]
 anyhow = {version = "1.0.86", optional = true}
 bytesize = "1.3.0"
-clap = {version = "4.5.13", features = ["derive"], optional = true}
+clap = {version = "4.5.14", features = ["derive"], optional = true}
 conv = "0.3.3"
 curl = {version = "0.4.46", default-features = false}
 env_logger = {version = "0.11.5", optional = true}
@@ -45,13 +45,13 @@ log = "0.4.22"
 num-traits = "0.2.19"
 thiserror = "1.0.63"
 url = "2.5.2"
-zip = {version = "2.1.6", default-features = false, features = ["bzip2", "deflate", "zstd"]}
+zip = {version = "1", default-features = false, features = ["bzip2", "deflate", "zstd"]}
 
 [dev-dependencies]
 actix-files = "0.6.6"
 actix-web = {version = "4.8.0", default-features = false, features = []}
 anyhow = "1.0.86"
-assert_cmd = "2.0.15"
+assert_cmd = "2.0.16"
 criterion = "0.5.1"
 predicates = "3.1.2"
 tempfile = "3.12.0"
