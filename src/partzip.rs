@@ -1,6 +1,8 @@
 use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
 use num_traits::ToPrimitive;
+use serde::Deserialize;
+use serde::Serialize;
 use std::cell::RefCell;
 use std::io;
 use std::io::BufReader;
@@ -54,15 +56,44 @@ pub struct PartialZip {
     archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
 }
 
+/// Compression methods for the files inside the archive. Redefined structure to make it serializable.
+/// Maps directly to the zip crate `zip::CompressionMethod` enum.
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PartialZipCompressionMethod {
+    /// Stored (no compression)
+    Stored,
+    /// Deflated compression
+    Deflated,
+    /// bzip2 compression
+    Bzip2,
+    /// zstd compression
+    Zstd,
+    /// unsupported compression
+    Unsupported,
+}
+
+impl From<zip::CompressionMethod> for PartialZipCompressionMethod {
+
+    fn from(value: zip::CompressionMethod) -> Self {
+        match value {
+            zip::CompressionMethod::Stored => Self::Stored,
+            zip::CompressionMethod::Deflated => Self::Deflated,
+            zip::CompressionMethod::Bzip2 => Self::Bzip2,
+            zip::CompressionMethod::Zstd => Self::Zstd,
+            _ => Self::Unsupported,
+        }
+    }
+}
+
 /// Struct for a file in the zip file with some attributes
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartialZipFileDetailed {
     /// Filename
     pub name: String,
     /// Compressed size of the file
     pub compressed_size: u64,
     /// How it has been compressed (compression method, like bzip2, deflate, etc.)
-    pub compression_method: zip::CompressionMethod,
+    pub compression_method: PartialZipCompressionMethod,
     /// Is the compression supported or not by this crate?
     pub supported: bool,
 }
@@ -105,7 +136,7 @@ impl PartialZip {
             .collect()
     }
 
-    /// Get a list of the files in the archive with details (slow)
+    /// Get a list of the files in the archive with details (much slower than just listing names because it fetches much more data around with more requests)
     pub fn list_detailed(&self) -> Vec<PartialZipFileDetailed> {
         let mut file_list = Vec::new();
         let num_files = self.archive.borrow().len();
@@ -124,7 +155,7 @@ impl PartialZip {
                     let pzf = PartialZipFileDetailed {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
-                        compression_method,
+                        compression_method: compression_method.into(),
                         supported,
                     };
                     file_list.push(pzf);

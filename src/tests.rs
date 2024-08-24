@@ -83,13 +83,13 @@ mod partzip_tests {
                     PartialZipFileDetailed {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
-                        compression_method: zip::CompressionMethod::Deflated,
+                        compression_method: zip::CompressionMethod::Deflated.into(),
                         supported: true
                     },
                     PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
-                        compression_method: zip::CompressionMethod::Deflated,
+                        compression_method: zip::CompressionMethod::Deflated.into(),
                         supported: true
                     }
                 ]
@@ -203,13 +203,13 @@ mod partzip_tests {
                 PartialZipFileDetailed {
                     name: "1.txt".to_string(),
                     compressed_size: 7,
-                    compression_method: zip::CompressionMethod::Deflated,
+                    compression_method: zip::CompressionMethod::Deflated.into(),
                     supported: true
                 },
                 PartialZipFileDetailed {
                     name: "2.txt".to_string(),
                     compressed_size: 7,
-                    compression_method: zip::CompressionMethod::Deflated,
+                    compression_method: zip::CompressionMethod::Deflated.into(),
                     supported: true
                 }
             ]
@@ -268,13 +268,13 @@ mod partzip_tests {
                     PartialZipFileDetailed {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
-                        compression_method: zip::CompressionMethod::Deflated,
+                        compression_method: zip::CompressionMethod::Deflated.into(),
                         supported: true
                     },
                     PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
-                        compression_method: zip::CompressionMethod::Deflated,
+                        compression_method: zip::CompressionMethod::Deflated.into(),
                         supported: true
                     }
                 ]
