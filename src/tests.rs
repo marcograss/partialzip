@@ -33,6 +33,7 @@ mod utils_tests {
 #[cfg(test)]
 mod partzip_tests {
     use actix_files as fs;
+    use chrono::NaiveDateTime;
     use std::{net::TcpListener, path::PathBuf};
     use url::Url;
     use zip::result::ZipError;
@@ -84,13 +85,23 @@ mod partzip_tests {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated.into(),
-                        supported: true
+                        supported: true,
+                        last_modified: NaiveDateTime::parse_from_str(
+                            "2022-08-12T15:24:30",
+                            "%Y-%m-%dT%H:%M:%S"
+                        )
+                        .ok(),
                     },
                     PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated.into(),
-                        supported: true
+                        supported: true,
+                        last_modified: NaiveDateTime::parse_from_str(
+                            "2022-08-12T15:24:36",
+                            "%Y-%m-%dT%H:%M:%S"
+                        )
+                        .ok(),
                     }
                 ]
             );
@@ -204,13 +215,23 @@ mod partzip_tests {
                     name: "1.txt".to_string(),
                     compressed_size: 7,
                     compression_method: zip::CompressionMethod::Deflated.into(),
-                    supported: true
+                    supported: true,
+                    last_modified: NaiveDateTime::parse_from_str(
+                        "2022-08-12T15:24:30",
+                        "%Y-%m-%dT%H:%M:%S"
+                    )
+                    .ok(),
                 },
                 PartialZipFileDetailed {
                     name: "2.txt".to_string(),
                     compressed_size: 7,
                     compression_method: zip::CompressionMethod::Deflated.into(),
-                    supported: true
+                    supported: true,
+                    last_modified: NaiveDateTime::parse_from_str(
+                        "2022-08-12T15:24:36",
+                        "%Y-%m-%dT%H:%M:%S"
+                    )
+                    .ok(),
                 }
             ]
         );
@@ -226,6 +247,19 @@ mod partzip_tests {
         let url = format!("file://localhost{}", d.display());
         let pz = PartialZip::new(&url)?;
         assert_eq!(url, pz.url());
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    /// Test that the file size getter works
+    fn test_file_size_getter() -> Result<()> {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("testdata/test.zip");
+        let url = format!("file://localhost{}", d.display());
+        let pz = PartialZip::new(&url)?;
+        // TODO get the filesize from filesystem
+        assert_eq!(368, pz.file_size());
         Ok(())
     }
 
@@ -269,13 +303,23 @@ mod partzip_tests {
                         name: "1.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated.into(),
-                        supported: true
+                        supported: true,
+                        last_modified: NaiveDateTime::parse_from_str(
+                            "2022-08-12T15:24:30",
+                            "%Y-%m-%dT%H:%M:%S"
+                        )
+                        .ok(),
                     },
                     PartialZipFileDetailed {
                         name: "2.txt".to_string(),
                         compressed_size: 7,
                         compression_method: zip::CompressionMethod::Deflated.into(),
-                        supported: true
+                        supported: true,
+                        last_modified: NaiveDateTime::parse_from_str(
+                            "2022-08-12T15:24:36",
+                            "%Y-%m-%dT%H:%M:%S"
+                        )
+                        .ok(),
                     }
                 ]
             );

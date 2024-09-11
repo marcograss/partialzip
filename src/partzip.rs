@@ -1,3 +1,6 @@
+use chrono::NaiveDate;
+use chrono::NaiveDateTime;
+use chrono::NaiveTime;
 use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
 use num_traits::ToPrimitive;
@@ -54,6 +57,8 @@ pub struct PartialZip {
     url: String,
     /// The archive object
     archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
+    /// The archive size
+    file_size: u64,
 }
 
 /// Compression methods for the files inside the archive. Redefined structure to make it serializable.
@@ -73,7 +78,6 @@ pub enum PartialZipCompressionMethod {
 }
 
 impl From<zip::CompressionMethod> for PartialZipCompressionMethod {
-
     fn from(value: zip::CompressionMethod) -> Self {
         match value {
             zip::CompressionMethod::Stored => Self::Stored,
@@ -96,6 +100,8 @@ pub struct PartialZipFileDetailed {
     pub compression_method: PartialZipCompressionMethod,
     /// Is the compression supported or not by this crate?
     pub supported: bool,
+    /// The date the file was last modified
+    pub last_modified: Option<NaiveDateTime>,
 }
 
 impl PartialZip {
@@ -113,18 +119,25 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new_check_range(url, check_range)?;
+        let file_size = reader.file_size;
         // higher capacity BufReader has better performances
         let bufreader = BufReader::with_capacity(0x0010_0000, reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(Self {
             url: url.to_string(),
             archive: RefCell::new(archive),
+            file_size,
         })
     }
 
     /// Returns the url for the [`PartialZip`]
     pub fn url(&self) -> String {
         self.url.clone()
+    }
+
+    /// Returns the zip size for the entire archive of the [`PartialZip`]
+    pub const fn file_size(&self) -> u64 {
+        self.file_size
     }
 
     /// Get a list of the filenames in the archive
@@ -152,11 +165,27 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
+                    let date = NaiveDate::from_ymd_opt(
+                        file.last_modified().year().into(),
+                        file.last_modified().month().into(),
+                        file.last_modified().day().into(),
+                    );
+                    let time = NaiveTime::from_hms_opt(
+                        file.last_modified().hour().into(),
+                        file.last_modified().minute().into(),
+                        file.last_modified().second().into(),
+                    );
+                    let last_modified = if let (Some(d), Some(t)) = (date, time) {
+                        Some(NaiveDateTime::new(d, t))
+                    } else {
+                        None
+                    };
                     let pzf = PartialZipFileDetailed {
                         name: file.name().to_string(),
                         compressed_size: file.compressed_size(),
                         compression_method: compression_method.into(),
                         supported,
+                        last_modified,
                     };
                     file_list.push(pzf);
                 }
