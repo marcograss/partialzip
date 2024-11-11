@@ -45,7 +45,7 @@ indicatif = {version = "0.17.8", optional = true}
 log = "0.4.22"
 num-traits = "0.2.19"
 serde = { version = "1.0.214", features = ["derive"] }
-thiserror = "1.0.68"
+thiserror = "2.0.3"
 url = "2.5.3"
 zip = {version = "1", default-features = false, features = ["bzip2", "deflate", "zstd"]}
 
