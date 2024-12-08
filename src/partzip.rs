@@ -279,7 +279,6 @@ impl PartialReader {
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
-
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
         let url = &url.to_string();
         if !utils::url_is_valid(url) {
