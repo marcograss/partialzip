@@ -37,7 +37,7 @@ name = "pz_benchmark"
 anyhow = {version = "1.0.97", optional = true}
 bytesize = "2.0.1"
 chrono = { version = "0.4.40", features = ["serde"] }
-clap = {version = "4.5.32", features = ["derive"], optional = true}
+clap = {version = "4.5.34", features = ["derive"], optional = true}
 conv = "0.3.3"
 curl = {version = "0.4.47", default-features = false}
 env_logger = {version = "0.11.7", optional = true}
