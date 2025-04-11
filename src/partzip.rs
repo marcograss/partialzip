@@ -193,7 +193,6 @@ impl PartialZip {
                     // We are unable to get a file, let's try to continue,
                     // and at least return the files we can
                     log::warn!("list: error while matching file by index: {i} - {e}");
-                    continue;
                 }
             };
         }
