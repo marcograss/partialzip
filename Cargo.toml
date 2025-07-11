@@ -37,7 +37,7 @@ name = "pz_benchmark"
 anyhow = {version = "1.0.98", optional = true}
 bytesize = "2.0.1"
 chrono = { version = "0.4.41", features = ["serde"] }
-clap = {version = "4.5.40", features = ["derive"], optional = true}
+clap = {version = "4.5.41", features = ["derive"], optional = true}
 conv = "0.3.3"
 curl = {version = "0.4.48", default-features = false}
 env_logger = {version = "0.11.8", optional = true}
@@ -57,4 +57,4 @@ assert_cmd = "2.0.17"
 criterion = "0.6.0"
 predicates = "3.1.3"
 tempfile = "3.20.0"
-tokio = {version = "1.46.0", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "1.46.1", features = ["macros", "rt-multi-thread"]}
