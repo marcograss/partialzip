@@ -256,10 +256,10 @@ mod partzip_tests {
     fn test_file_size_getter() -> Result<()> {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
+        let expected_size = std::fs::metadata(&d)?.len();
         let url = format!("file://localhost{}", d.display());
         let pz = PartialZip::new(&url)?;
-        // TODO get the filesize from filesystem
-        assert_eq!(368, pz.file_size());
+        assert_eq!(expected_size, pz.file_size());
         Ok(())
     }
 

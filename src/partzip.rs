@@ -131,8 +131,9 @@ impl PartialZip {
     }
 
     /// Returns the url for the [`PartialZip`]
-    pub fn url(&self) -> String {
-        self.url.clone()
+    #[must_use]
+    pub fn url(&self) -> &str {
+        &self.url
     }
 
     /// Returns the zip size for the entire archive of the [`PartialZip`]
@@ -330,8 +331,8 @@ impl PartialReader {
 
     /// Returns the url for the [`PartialReader`]
     #[must_use]
-    pub fn url(&self) -> String {
-        self.url.clone()
+    pub fn url(&self) -> &str {
+        &self.url
     }
 }
 

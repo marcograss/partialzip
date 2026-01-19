@@ -20,6 +20,7 @@
 pub mod partzip;
 pub use partzip::PartialReader;
 pub use partzip::PartialZip;
+pub use partzip::PartialZipCompressionMethod;
 pub use partzip::PartialZipError;
 pub use partzip::PartialZipFileDetailed;
 /// Small utilities mostly for URLs
