@@ -165,7 +165,7 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    let (date, time) = if let Some(datetime) = file.last_modified() {
+                    let (date, time) = file.last_modified().map_or((None, None), |datetime| {
                         (
                             NaiveDate::from_ymd_opt(
                                 datetime.year().into(),
@@ -178,9 +178,7 @@ impl PartialZip {
                                 datetime.second().into(),
                             ),
                         )
-                    } else {
-                        (None, None)
-                    };
+                    });
                     let last_modified = if let (Some(d), Some(t)) = (date, time) {
                         Some(NaiveDateTime::new(d, t))
                     } else {
