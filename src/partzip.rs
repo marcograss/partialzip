@@ -323,7 +323,7 @@ impl PartialReader {
             easy.nobody(false)?;
         }
         Ok(Self {
-            url: url.to_string(),
+            url: url.clone(),
             file_size,
             easy,
             pos: 0,
