@@ -2,18 +2,19 @@
 /// Those are the tests for the CLI tool to see that everything works end to end and we didn't break the command line interface
 mod cli_tests {
     use anyhow::Result;
+    use assert_cmd::cargo::cargo_bin;
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
     use std::process::Command;
 
     #[test]
     fn binary_exists() {
-        Command::cargo_bin("partialzip").expect("binary exists");
+        assert!(cargo_bin!("partialzip").exists(), "binary exists");
     }
 
     #[test]
-    fn cli_flags_work() -> Result<()> {
-        let mut cmd = Command::cargo_bin("partialzip")?;
+    fn cli_flags_work() {
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.assert()
             .failure()
             .stderr(predicate::str::contains("Usage"));
@@ -22,28 +23,26 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("Usage"));
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list");
         cmd.assert().failure().stderr(
             predicate::str::contains("partialzip list")
                 .or(predicate::str::contains("partialzip.exe list")),
         );
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("download");
         cmd.assert().failure().stderr(
             predicate::str::contains("partialzip download")
                 .or(predicate::str::contains("partialzip.exe download")),
         );
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("pipe");
         cmd.assert().failure().stderr(
             predicate::str::contains("partialzip pipe")
                 .or(predicate::str::contains("partialzip.exe pipe")),
         );
-
-        Ok(())
     }
 
     #[cfg(unix)]
@@ -57,7 +56,7 @@ mod cli_tests {
         d.push("testdata/test.zip");
         let target_arg = format!("file://localhost{}", d.display());
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list").arg("-d").arg(&target_arg);
         cmd.assert().success().stdout(
             predicate::str::is_match(
@@ -66,7 +65,7 @@ mod cli_tests {
             .unwrap(),
         );
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list").arg(&target_arg);
 
         cmd.assert()
@@ -76,7 +75,7 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("2.txt\n"));
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("-r").arg("list").arg(&target_arg);
         cmd.assert()
             .failure()
@@ -84,7 +83,7 @@ mod cli_tests {
 
         let output_file = NamedTempFile::new()?.path().display().to_string();
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("download")
             .arg(&target_arg)
             .arg("1.txt")
@@ -93,7 +92,7 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("1.txt extracted to"));
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("download")
             .arg(&target_arg)
             .arg("1.txt")
@@ -104,7 +103,7 @@ mod cli_tests {
 
         fs::remove_file(&output_file)?;
 
-        let mut cmd = Command::cargo_bin("partialzip")?;
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("pipe").arg(&target_arg).arg("1.txt");
         cmd.assert().success();
 
