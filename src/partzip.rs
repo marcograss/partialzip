@@ -165,16 +165,22 @@ impl PartialZip {
                             | zip::CompressionMethod::Bzip2
                             | zip::CompressionMethod::Zstd
                     );
-                    let date = NaiveDate::from_ymd_opt(
-                        file.last_modified().year().into(),
-                        file.last_modified().month().into(),
-                        file.last_modified().day().into(),
-                    );
-                    let time = NaiveTime::from_hms_opt(
-                        file.last_modified().hour().into(),
-                        file.last_modified().minute().into(),
-                        file.last_modified().second().into(),
-                    );
+                    let (date, time) = if let Some(datetime) = file.last_modified() {
+                        (
+                            NaiveDate::from_ymd_opt(
+                                datetime.year().into(),
+                                datetime.month().into(),
+                                datetime.day().into(),
+                            ),
+                            NaiveTime::from_hms_opt(
+                                datetime.hour().into(),
+                                datetime.minute().into(),
+                                datetime.second().into(),
+                            ),
+                        )
+                    } else {
+                        (None, None)
+                    };
                     let last_modified = if let (Some(d), Some(t)) = (date, time) {
                         Some(NaiveDateTime::new(d, t))
                     } else {
