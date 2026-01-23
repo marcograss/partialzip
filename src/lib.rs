@@ -24,7 +24,10 @@ pub use partzip::PartialZipCompressionMethod;
 pub use partzip::PartialZipError;
 pub use partzip::PartialZipFileDetailed;
 pub use partzip::PartialZipOptions;
+pub use partzip::DEFAULT_CONNECT_TIMEOUT_SECS;
 pub use partzip::DEFAULT_MAX_REDIRECTS;
+pub use partzip::DEFAULT_TCP_KEEPIDLE_SECS;
+pub use partzip::DEFAULT_TCP_KEEPINTVL_SECS;
 /// Small utilities mostly for URLs
 mod utils;
 

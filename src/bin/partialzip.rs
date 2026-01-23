@@ -1,8 +1,11 @@
 use anyhow::{Context, Result};
 use bytesize::ByteSize;
 use clap::{Parser, Subcommand};
-use partialzip::partzip::{PartialZip, PartialZipOptions, DEFAULT_MAX_REDIRECTS};
+use partialzip::partzip::{
+    PartialZip, PartialZipOptions, DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_MAX_REDIRECTS,
+};
 use std::fs::File;
+use std::time::Duration;
 use url::Url;
 
 /// Handler to list the files from command line
@@ -60,6 +63,9 @@ struct Cli {
     /// Maximum number of HTTP redirects to follow
     #[arg(short = 'm', long, default_value_t = DEFAULT_MAX_REDIRECTS)]
     max_redirects: u32,
+    /// Connection timeout in seconds (0 = no timeout)
+    #[arg(short = 't', long, default_value_t = DEFAULT_CONNECT_TIMEOUT_SECS)]
+    connect_timeout: u64,
     #[command(subcommand)]
     command: Commands,
 }
@@ -88,9 +94,15 @@ fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
+    let connect_timeout = if cli.connect_timeout == 0 {
+        None
+    } else {
+        Some(Duration::from_secs(cli.connect_timeout))
+    };
     let options = PartialZipOptions::new()
         .check_range(cli.check_range)
-        .max_redirects(cli.max_redirects);
+        .max_redirects(cli.max_redirects)
+        .connect_timeout(connect_timeout);
 
     match cli.command {
         Commands::List { detailed, url } => list(&url, detailed, options),

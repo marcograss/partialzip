@@ -40,9 +40,12 @@ mod partzip_tests {
 
     use actix_web::{App, HttpResponse, HttpServer};
 
+    use std::time::Duration;
+
     use crate::partzip::{
         PartialZip, PartialZipError, PartialZipFileDetailed, PartialZipOptions,
-        DEFAULT_MAX_REDIRECTS,
+        DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_MAX_REDIRECTS, DEFAULT_TCP_KEEPIDLE_SECS,
+        DEFAULT_TCP_KEEPINTVL_SECS,
     };
 
     use anyhow::Result;
@@ -338,6 +341,21 @@ mod partzip_tests {
         assert!(!options.check_range);
         assert_eq!(options.max_redirects, DEFAULT_MAX_REDIRECTS);
         assert_eq!(options.max_redirects, 10);
+        assert_eq!(
+            options.connect_timeout,
+            Some(Duration::from_secs(DEFAULT_CONNECT_TIMEOUT_SECS))
+        );
+        assert_eq!(options.connect_timeout, Some(Duration::from_secs(30)));
+        assert_eq!(
+            options.tcp_keepidle,
+            Duration::from_secs(DEFAULT_TCP_KEEPIDLE_SECS)
+        );
+        assert_eq!(options.tcp_keepidle, Duration::from_secs(120));
+        assert_eq!(
+            options.tcp_keepintvl,
+            Duration::from_secs(DEFAULT_TCP_KEEPINTVL_SECS)
+        );
+        assert_eq!(options.tcp_keepintvl, Duration::from_secs(60));
     }
 
     #[test]
@@ -345,9 +363,19 @@ mod partzip_tests {
     fn test_options_builder() {
         let options = PartialZipOptions::new()
             .check_range(true)
-            .max_redirects(5);
+            .max_redirects(5)
+            .connect_timeout(Some(Duration::from_secs(60)))
+            .tcp_keepidle(Duration::from_secs(90))
+            .tcp_keepintvl(Duration::from_secs(30));
         assert!(options.check_range);
         assert_eq!(options.max_redirects, 5);
+        assert_eq!(options.connect_timeout, Some(Duration::from_secs(60)));
+        assert_eq!(options.tcp_keepidle, Duration::from_secs(90));
+        assert_eq!(options.tcp_keepintvl, Duration::from_secs(30));
+
+        // Test None timeout
+        let options = PartialZipOptions::new().connect_timeout(None);
+        assert_eq!(options.connect_timeout, None);
     }
 
     #[cfg(unix)]

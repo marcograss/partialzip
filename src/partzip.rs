@@ -53,6 +53,15 @@ pub enum PartialZipError {
 /// Default maximum number of HTTP redirects to follow
 pub const DEFAULT_MAX_REDIRECTS: u32 = 10;
 
+/// Default connection timeout in seconds
+pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 30;
+
+/// Default TCP keep-alive idle time in seconds
+pub const DEFAULT_TCP_KEEPIDLE_SECS: u64 = 120;
+
+/// Default TCP keep-alive interval in seconds
+pub const DEFAULT_TCP_KEEPINTVL_SECS: u64 = 60;
+
 /// Options for configuring [`PartialZip`] and [`PartialReader`] behavior
 #[derive(Debug, Clone, Copy)]
 pub struct PartialZipOptions {
@@ -60,6 +69,12 @@ pub struct PartialZipOptions {
     pub check_range: bool,
     /// Maximum number of HTTP redirects to follow (prevents redirect loops and SSRF attacks)
     pub max_redirects: u32,
+    /// Connection timeout (None = no timeout)
+    pub connect_timeout: Option<Duration>,
+    /// TCP keep-alive idle time before sending probes
+    pub tcp_keepidle: Duration,
+    /// TCP keep-alive interval between probes
+    pub tcp_keepintvl: Duration,
 }
 
 impl Default for PartialZipOptions {
@@ -67,6 +82,9 @@ impl Default for PartialZipOptions {
         Self {
             check_range: false,
             max_redirects: DEFAULT_MAX_REDIRECTS,
+            connect_timeout: Some(Duration::from_secs(DEFAULT_CONNECT_TIMEOUT_SECS)),
+            tcp_keepidle: Duration::from_secs(DEFAULT_TCP_KEEPIDLE_SECS),
+            tcp_keepintvl: Duration::from_secs(DEFAULT_TCP_KEEPINTVL_SECS),
         }
     }
 }
@@ -89,6 +107,27 @@ impl PartialZipOptions {
     #[must_use]
     pub const fn max_redirects(mut self, max: u32) -> Self {
         self.max_redirects = max;
+        self
+    }
+
+    /// Set the connection timeout (None = no timeout)
+    #[must_use]
+    pub const fn connect_timeout(mut self, timeout: Option<Duration>) -> Self {
+        self.connect_timeout = timeout;
+        self
+    }
+
+    /// Set the TCP keep-alive idle time before sending probes
+    #[must_use]
+    pub const fn tcp_keepidle(mut self, duration: Duration) -> Self {
+        self.tcp_keepidle = duration;
+        self
+    }
+
+    /// Set the TCP keep-alive interval between probes
+    #[must_use]
+    pub const fn tcp_keepintvl(mut self, duration: Duration) -> Self {
+        self.tcp_keepintvl = duration;
         self
     }
 }
@@ -359,9 +398,12 @@ impl PartialReader {
         easy.url(url)?;
         easy.follow_location(true)?;
         easy.max_redirections(options.max_redirects)?;
+        if let Some(timeout) = options.connect_timeout {
+            easy.connect_timeout(timeout)?;
+        }
         easy.tcp_keepalive(true)?;
-        easy.tcp_keepidle(Duration::from_secs(120))?;
-        easy.tcp_keepintvl(Duration::from_secs(60))?;
+        easy.tcp_keepidle(options.tcp_keepidle)?;
+        easy.tcp_keepintvl(options.tcp_keepintvl)?;
         easy.nobody(true)?;
         easy.write_function(|data| Ok(data.len()))?;
         easy.perform()?;

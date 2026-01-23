@@ -30,6 +30,13 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("--max-redirects"));
 
+        // Verify --connect-timeout flag is documented in help
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--help");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("--connect-timeout"));
+
         let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list");
         cmd.assert().failure().stderr(
@@ -137,6 +144,42 @@ mod cli_tests {
         cmd.assert()
             .failure()
             .stderr(predicate::str::contains("Range request not supported\n"));
+
+        // Test --connect-timeout flag with short form
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("-t").arg("60").arg("list").arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
+
+        // Test --connect-timeout flag with long form
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--connect-timeout")
+            .arg("45")
+            .arg("list")
+            .arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
+
+        // Test --connect-timeout with 0 (no timeout)
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("-t").arg("0").arg("list").arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
+
+        // Test combining all flags
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("-m")
+            .arg("5")
+            .arg("-t")
+            .arg("30")
+            .arg("list")
+            .arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
 
         Ok(())
     }
