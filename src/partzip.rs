@@ -66,7 +66,7 @@ pub const DEFAULT_TCP_KEEPIDLE_SECS: u64 = 120;
 pub const DEFAULT_TCP_KEEPINTVL_SECS: u64 = 60;
 
 /// Options for configuring [`PartialZip`] and [`PartialReader`] behavior
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PartialZipOptions {
     /// Whether to verify that the server supports HTTP Range requests
     pub check_range: bool,
@@ -78,6 +78,12 @@ pub struct PartialZipOptions {
     pub tcp_keepidle: Duration,
     /// TCP keep-alive interval between probes
     pub tcp_keepintvl: Duration,
+    /// Basic authentication credentials (username, password)
+    pub basic_auth: Option<(String, String)>,
+    /// Proxy URL (e.g., `http://proxy:8080`, `socks5://proxy:1080`)
+    pub proxy: Option<String>,
+    /// Proxy authentication credentials (username, password)
+    pub proxy_auth: Option<(String, String)>,
 }
 
 impl Default for PartialZipOptions {
@@ -88,6 +94,9 @@ impl Default for PartialZipOptions {
             connect_timeout: Some(Duration::from_secs(DEFAULT_CONNECT_TIMEOUT_SECS)),
             tcp_keepidle: Duration::from_secs(DEFAULT_TCP_KEEPIDLE_SECS),
             tcp_keepintvl: Duration::from_secs(DEFAULT_TCP_KEEPINTVL_SECS),
+            basic_auth: None,
+            proxy: None,
+            proxy_auth: None,
         }
     }
 }
@@ -101,36 +110,57 @@ impl PartialZipOptions {
 
     /// Set whether to check for range request support
     #[must_use]
-    pub const fn check_range(mut self, check: bool) -> Self {
+    pub fn check_range(mut self, check: bool) -> Self {
         self.check_range = check;
         self
     }
 
     /// Set the maximum number of redirects to follow
     #[must_use]
-    pub const fn max_redirects(mut self, max: u32) -> Self {
+    pub fn max_redirects(mut self, max: u32) -> Self {
         self.max_redirects = max;
         self
     }
 
     /// Set the connection timeout (None = no timeout)
     #[must_use]
-    pub const fn connect_timeout(mut self, timeout: Option<Duration>) -> Self {
+    pub fn connect_timeout(mut self, timeout: Option<Duration>) -> Self {
         self.connect_timeout = timeout;
         self
     }
 
     /// Set the TCP keep-alive idle time before sending probes
     #[must_use]
-    pub const fn tcp_keepidle(mut self, duration: Duration) -> Self {
+    pub fn tcp_keepidle(mut self, duration: Duration) -> Self {
         self.tcp_keepidle = duration;
         self
     }
 
     /// Set the TCP keep-alive interval between probes
     #[must_use]
-    pub const fn tcp_keepintvl(mut self, duration: Duration) -> Self {
+    pub fn tcp_keepintvl(mut self, duration: Duration) -> Self {
         self.tcp_keepintvl = duration;
+        self
+    }
+
+    /// Set basic authentication credentials
+    #[must_use]
+    pub fn basic_auth(mut self, username: &str, password: &str) -> Self {
+        self.basic_auth = Some((username.to_string(), password.to_string()));
+        self
+    }
+
+    /// Set proxy URL (e.g., `http://proxy:8080`, `socks5://proxy:1080`)
+    #[must_use]
+    pub fn proxy(mut self, url: &str) -> Self {
+        self.proxy = Some(url.to_string());
+        self
+    }
+
+    /// Set proxy authentication credentials
+    #[must_use]
+    pub fn proxy_auth(mut self, username: &str, password: &str) -> Self {
+        self.proxy_auth = Some((username.to_string(), password.to_string()));
         self
     }
 }
@@ -195,7 +225,7 @@ impl PartialZip {
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        Self::new_with_options(url, PartialZipOptions::default())
+        Self::new_with_options(url, &PartialZipOptions::default())
     }
 
     /// Create a new [`PartialZip`] with range checking option
@@ -203,7 +233,7 @@ impl PartialZip {
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
-        Self::new_with_options(url, PartialZipOptions::default().check_range(check_range))
+        Self::new_with_options(url, &PartialZipOptions::default().check_range(check_range))
     }
 
     /// Create a new [`PartialZip`] with custom options
@@ -212,7 +242,7 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_with_options(
         url: &dyn ToString,
-        options: PartialZipOptions,
+        options: &PartialZipOptions,
     ) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new_with_options(url, options)?;
         let file_size = reader.file_size;
@@ -522,7 +552,7 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        Self::new_with_options(url, PartialZipOptions::default())
+        Self::new_with_options(url, &PartialZipOptions::default())
     }
 
     /// Creates a new [`PartialReader`] with range checking option
@@ -530,7 +560,7 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
-        Self::new_with_options(url, PartialZipOptions::default().check_range(check_range))
+        Self::new_with_options(url, &PartialZipOptions::default().check_range(check_range))
     }
 
     /// Creates a new [`PartialReader`] with custom options
@@ -539,7 +569,7 @@ impl PartialReader {
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new_with_options(
         url: &dyn ToString,
-        options: PartialZipOptions,
+        options: &PartialZipOptions,
     ) -> Result<Self, PartialZipError> {
         let url = &url.to_string();
         if !utils::url_is_valid(url) {
@@ -556,6 +586,22 @@ impl PartialReader {
         easy.tcp_keepalive(true)?;
         easy.tcp_keepidle(options.tcp_keepidle)?;
         easy.tcp_keepintvl(options.tcp_keepintvl)?;
+
+        // Authentication
+        if let Some((username, password)) = &options.basic_auth {
+            easy.username(username)?;
+            easy.password(password)?;
+        }
+
+        // Proxy configuration
+        if let Some(proxy_url) = &options.proxy {
+            easy.proxy(proxy_url)?;
+        }
+        if let Some((username, password)) = &options.proxy_auth {
+            easy.proxy_username(username)?;
+            easy.proxy_password(password)?;
+        }
+
         easy.nobody(true)?;
         easy.write_function(|data| Ok(data.len()))?;
         easy.perform()?;

@@ -9,7 +9,7 @@ use std::time::Duration;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, detailed: bool, options: PartialZipOptions) -> Result<()> {
+fn list(url: &str, detailed: bool, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for listing")?;
     let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for listing")?;
@@ -29,7 +29,7 @@ fn list(url: &str, detailed: bool, options: PartialZipOptions) -> Result<()> {
 }
 
 /// Handler to download the file from command line
-fn download(url: &str, filename: &str, outputfile: &str, options: PartialZipOptions) -> Result<()> {
+fn download(url: &str, filename: &str, outputfile: &str, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for downloading")?;
     let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for downloading")?;
@@ -45,7 +45,7 @@ fn download(url: &str, filename: &str, outputfile: &str, options: PartialZipOpti
 }
 
 /// Handler to download the file and pipe it to stdout
-fn pipe(url: &str, filename: &str, options: PartialZipOptions) -> Result<()> {
+fn pipe(url: &str, filename: &str, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for piping")?;
     let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for piping")?;
@@ -66,6 +66,21 @@ struct Cli {
     /// Connection timeout in seconds (0 = no timeout)
     #[arg(short = 't', long, default_value_t = DEFAULT_CONNECT_TIMEOUT_SECS)]
     connect_timeout: u64,
+    /// Username for basic authentication
+    #[arg(short = 'u', long)]
+    username: Option<String>,
+    /// Password for basic authentication
+    #[arg(short = 'p', long)]
+    password: Option<String>,
+    /// Proxy URL (e.g., http://proxy:8080, socks5://proxy:1080)
+    #[arg(long)]
+    proxy: Option<String>,
+    /// Proxy username
+    #[arg(long)]
+    proxy_user: Option<String>,
+    /// Proxy password
+    #[arg(long)]
+    proxy_pass: Option<String>,
     #[command(subcommand)]
     command: Commands,
 }
@@ -99,18 +114,31 @@ fn main() -> Result<()> {
     } else {
         Some(Duration::from_secs(cli.connect_timeout))
     };
-    let options = PartialZipOptions::new()
+    let mut options = PartialZipOptions::new()
         .check_range(cli.check_range)
         .max_redirects(cli.max_redirects)
         .connect_timeout(connect_timeout);
 
+    // Basic authentication
+    if let (Some(username), Some(password)) = (cli.username, cli.password) {
+        options = options.basic_auth(&username, &password);
+    }
+
+    // Proxy configuration
+    if let Some(proxy_url) = cli.proxy {
+        options = options.proxy(&proxy_url);
+    }
+    if let (Some(proxy_user), Some(proxy_pass)) = (cli.proxy_user, cli.proxy_pass) {
+        options = options.proxy_auth(&proxy_user, &proxy_pass);
+    }
+
     match cli.command {
-        Commands::List { detailed, url } => list(&url, detailed, options),
+        Commands::List { detailed, url } => list(&url, detailed, &options),
         Commands::Download {
             url,
             filename,
             outputfile,
-        } => download(&url, &filename, &outputfile, options),
-        Commands::Pipe { url, filename } => pipe(&url, &filename, options),
+        } => download(&url, &filename, &outputfile, &options),
+        Commands::Pipe { url, filename } => pipe(&url, &filename, &options),
     }
 }

@@ -37,6 +37,23 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("--connect-timeout"));
 
+        // Verify authentication flags are documented in help
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--help");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("--username"))
+            .stdout(predicate::str::contains("--password"));
+
+        // Verify proxy flags are documented in help
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--help");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("--proxy"))
+            .stdout(predicate::str::contains("--proxy-user"))
+            .stdout(predicate::str::contains("--proxy-pass"));
+
         let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list");
         cmd.assert().failure().stderr(

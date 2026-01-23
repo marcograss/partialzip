@@ -54,7 +54,7 @@
 //!         .connect_timeout(Some(Duration::from_secs(60))) // Connection timeout (default: 30s)
 //!         .check_range(true);                            // Verify server supports range requests
 //!
-//!     let pz = PartialZip::new_with_options(&"https://example.com/archive.zip", options)?;
+//!     let pz = PartialZip::new_with_options(&"https://example.com/archive.zip", &options)?;
 //!     Ok(())
 //! }
 //! ```

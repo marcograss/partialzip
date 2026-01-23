@@ -411,6 +411,68 @@ mod partzip_tests {
         assert_eq!(options.connect_timeout, None);
     }
 
+    #[test]
+    /// Test that basic_auth builder method works correctly
+    fn test_options_basic_auth() {
+        let options = PartialZipOptions::new().basic_auth("user", "pass");
+        assert_eq!(
+            options.basic_auth,
+            Some(("user".to_string(), "pass".to_string()))
+        );
+
+        // Default should be None
+        let options = PartialZipOptions::new();
+        assert_eq!(options.basic_auth, None);
+    }
+
+    #[test]
+    /// Test that proxy builder method works correctly
+    fn test_options_proxy() {
+        let options = PartialZipOptions::new().proxy("http://proxy:8080");
+        assert_eq!(options.proxy, Some("http://proxy:8080".to_string()));
+
+        // Test socks5 proxy
+        let options = PartialZipOptions::new().proxy("socks5://proxy:1080");
+        assert_eq!(options.proxy, Some("socks5://proxy:1080".to_string()));
+
+        // Default should be None
+        let options = PartialZipOptions::new();
+        assert_eq!(options.proxy, None);
+    }
+
+    #[test]
+    /// Test that proxy_auth builder method works correctly
+    fn test_options_proxy_auth() {
+        let options = PartialZipOptions::new().proxy_auth("proxyuser", "proxypass");
+        assert_eq!(
+            options.proxy_auth,
+            Some(("proxyuser".to_string(), "proxypass".to_string()))
+        );
+
+        // Default should be None
+        let options = PartialZipOptions::new();
+        assert_eq!(options.proxy_auth, None);
+    }
+
+    #[test]
+    /// Test combining all auth and proxy options
+    fn test_options_auth_proxy_combined() {
+        let options = PartialZipOptions::new()
+            .basic_auth("user", "pass")
+            .proxy("http://proxy:8080")
+            .proxy_auth("proxyuser", "proxypass");
+
+        assert_eq!(
+            options.basic_auth,
+            Some(("user".to_string(), "pass".to_string()))
+        );
+        assert_eq!(options.proxy, Some("http://proxy:8080".to_string()));
+        assert_eq!(
+            options.proxy_auth,
+            Some(("proxyuser".to_string(), "proxypass".to_string()))
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     /// Test that new_with_options works correctly
@@ -419,7 +481,7 @@ mod partzip_tests {
         d.push("testdata/test.zip");
         let url = format!("file://localhost{}", d.display());
         let options = PartialZipOptions::new().max_redirects(5);
-        let pz = PartialZip::new_with_options(&url, options)?;
+        let pz = PartialZip::new_with_options(&url, &options)?;
         assert_eq!(url, pz.url());
         Ok(())
     }
@@ -431,7 +493,7 @@ mod partzip_tests {
         tokio::task::spawn_blocking(move || {
             let options = PartialZipOptions::new().max_redirects(0);
             let redirect_url = address.join("/redirect").expect("valid URL");
-            let pz = PartialZip::new_with_options(&redirect_url, options);
+            let pz = PartialZip::new_with_options(&redirect_url, &options);
             // With max_redirects = 0, following the redirect should fail
             assert!(pz.is_err(), "should fail when max_redirects is 0 and URL redirects");
         })
@@ -447,7 +509,7 @@ mod partzip_tests {
             let options = PartialZipOptions::new()
                 .check_range(true)
                 .max_redirects(10);
-            let pz = PartialZip::new_with_options(&address.join("/files/test.zip")?, options)?;
+            let pz = PartialZip::new_with_options(&address.join("/files/test.zip")?, &options)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             Ok(())
