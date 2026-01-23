@@ -423,6 +423,85 @@ impl PartialZip {
         let bytes_written = io::copy(&mut pb.wrap_read(file), writer)?;
         Ok(bytes_written)
     }
+
+    /// Download multiple files from the archive into memory.
+    ///
+    /// This method efficiently reuses the underlying connection for all downloads.
+    /// Returns a vector of tuples containing the filename and its content.
+    ///
+    /// **Note:** All file contents are loaded into RAM. For large files, consider using
+    /// [`download_multiple_to_dir`](Self::download_multiple_to_dir) instead.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    /// Successfully downloaded files before the error are not returned.
+    pub fn download_multiple(
+        &self,
+        filenames: &[&str],
+    ) -> Result<Vec<(String, Vec<u8>)>, PartialZipError> {
+        filenames
+            .iter()
+            .map(|filename| {
+                let content = self.download(filename)?;
+                Ok(((*filename).to_string(), content))
+            })
+            .collect()
+    }
+
+    /// Download multiple files from the archive to a directory, streaming to disk.
+    ///
+    /// This method efficiently reuses the underlying connection for all downloads
+    /// and streams each file directly to disk without loading entire contents into memory.
+    ///
+    /// Files are saved with their original names from the archive. If a file in the archive
+    /// contains path separators, only the final component (filename) is used.
+    ///
+    /// Returns the total number of bytes written across all files.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    pub fn download_multiple_to_dir(
+        &self,
+        filenames: &[&str],
+        output_dir: &Path,
+    ) -> Result<u64, PartialZipError> {
+        let mut total_bytes = 0u64;
+        for filename in filenames {
+            // Extract just the filename component (handle paths in archive)
+            let output_name = Path::new(filename)
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new(filename));
+            let output_path = output_dir.join(output_name);
+            total_bytes += self.download_to_file(filename, &output_path)?;
+        }
+        Ok(total_bytes)
+    }
+
+    /// Download multiple files from the archive to a directory with progress bars.
+    ///
+    /// This method efficiently reuses the underlying connection for all downloads
+    /// and streams each file directly to disk without loading entire contents into memory.
+    ///
+    /// Returns the total number of bytes written across all files.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    #[cfg(feature = "progressbar")]
+    pub fn download_multiple_to_dir_with_progressbar(
+        &self,
+        filenames: &[&str],
+        output_dir: &Path,
+    ) -> Result<u64, PartialZipError> {
+        let mut total_bytes = 0u64;
+        for filename in filenames {
+            let output_name = Path::new(filename)
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new(filename));
+            let output_path = output_dir.join(output_name);
+            total_bytes += self.download_to_file_with_progressbar(filename, &output_path)?;
+        }
+        Ok(total_bytes)
+    }
 }
 
 /// Reader for the partialzip doing only the partial read instead of downloading everything

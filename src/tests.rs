@@ -454,4 +454,64 @@ mod partzip_tests {
         })
         .await?
     }
+
+    #[tokio::test]
+    /// Test downloading multiple files at once
+    async fn test_download_multiple() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let results = pz.download_multiple(&["1.txt", "2.txt"])?;
+
+            assert_eq!(results.len(), 2);
+            assert_eq!(results[0].0, "1.txt");
+            assert_eq!(results[0].1, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            assert_eq!(results[1].0, "2.txt");
+            assert_eq!(results[1].1, vec![0x42, 0x42, 0x42, 0x42, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test downloading multiple files to a directory
+    async fn test_download_multiple_to_dir() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let temp_dir = tempfile::tempdir()?;
+            let total_bytes = pz.download_multiple_to_dir(&["1.txt", "2.txt"], temp_dir.path())?;
+
+            assert_eq!(total_bytes, 10); // 5 bytes each
+            assert_eq!(
+                std::fs::read(temp_dir.path().join("1.txt"))?,
+                vec![0x41, 0x41, 0x41, 0x41, 0xa]
+            );
+            assert_eq!(
+                std::fs::read(temp_dir.path().join("2.txt"))?,
+                vec![0x42, 0x42, 0x42, 0x42, 0xa]
+            );
+            Ok(())
+        })
+        .await?
+    }
+
+    #[cfg(feature = "progressbar")]
+    #[tokio::test]
+    /// Test downloading multiple files to a directory with progress bar
+    async fn test_download_multiple_to_dir_with_progressbar() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let temp_dir = tempfile::tempdir()?;
+            let total_bytes =
+                pz.download_multiple_to_dir_with_progressbar(&["1.txt", "2.txt"], temp_dir.path())?;
+
+            assert_eq!(total_bytes, 10);
+            assert!(temp_dir.path().join("1.txt").exists());
+            assert!(temp_dir.path().join("2.txt").exists());
+            Ok(())
+        })
+        .await?
+    }
 }
