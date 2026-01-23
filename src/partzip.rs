@@ -7,9 +7,12 @@ use num_traits::ToPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 use std::cell::RefCell;
+use std::fs::File;
 use std::io;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::io::ErrorKind;
+use std::path::Path;
 use std::time::Duration;
 use thiserror::Error;
 use zip::result::ZipError;
@@ -296,7 +299,12 @@ impl PartialZip {
         }
         file_list
     }
-    /// Download a single file from the archive
+    /// Download a single file from the archive into memory.
+    ///
+    /// **Note:** This loads the entire decompressed file into RAM. For large files,
+    /// consider using [`download_to_file`](Self::download_to_file) or
+    /// [`download_to_write`](Self::download_to_write) which stream directly to disk
+    /// without buffering the entire file in memory.
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
@@ -306,7 +314,43 @@ impl PartialZip {
         Ok(content)
     }
 
-    /// Download a single file from the archive and writes it to a [`std::io::Write`]
+    /// Download a single file from the archive directly to a file path.
+    ///
+    /// This is the recommended method for large files as it streams the decompressed
+    /// content directly to disk without loading the entire file into memory.
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] depending on what happened
+    pub fn download_to_file(
+        &self,
+        filename: &str,
+        output_path: &Path,
+    ) -> Result<u64, PartialZipError> {
+        let file = File::create(output_path)?;
+        let mut writer = BufWriter::new(file);
+        self.download_to_write(filename, &mut writer)
+    }
+
+    /// Download a single file from the archive and write it to any [`std::io::Write`] implementor.
+    ///
+    /// This method streams the decompressed content directly to the writer without
+    /// buffering the entire file in memory. Use this for large files or when you need
+    /// custom output handling.
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use partialzip::PartialZip;
+    /// use std::fs::File;
+    ///
+    /// let pz = PartialZip::new(&"https://example.com/archive.zip")?;
+    /// let mut file = File::create("output.bin")?;
+    /// pz.download_to_write("large_file.bin", &mut file)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
@@ -314,14 +358,18 @@ impl PartialZip {
         &self,
         filename: &str,
         writer: &mut dyn std::io::Write,
-    ) -> Result<(), PartialZipError> {
+    ) -> Result<u64, PartialZipError> {
         let mut archive = self.archive.borrow_mut();
         let mut file = archive.by_name(filename)?;
-        io::copy(&mut file, writer)?;
-        Ok(())
+        let bytes_written = io::copy(&mut file, writer)?;
+        Ok(bytes_written)
     }
 
-    /// Download a single file from the archive showing a progress bar
+    /// Download a single file from the archive into memory, showing a progress bar.
+    ///
+    /// **Note:** This loads the entire decompressed file into RAM. For large files,
+    /// consider using [`download_to_file_with_progressbar`](Self::download_to_file_with_progressbar)
+    /// or [`download_to_write_with_progressbar`](Self::download_to_write_with_progressbar).
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
@@ -332,7 +380,32 @@ impl PartialZip {
         Ok(content)
     }
 
-    /// Download a single file from the archive showing a progress bar to a [`std::io::Write`]
+    /// Download a single file from the archive directly to a file path, showing a progress bar.
+    ///
+    /// This is the recommended method for large files as it streams the decompressed
+    /// content directly to disk without loading the entire file into memory.
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] depending on what happened
+    #[cfg(feature = "progressbar")]
+    pub fn download_to_file_with_progressbar(
+        &self,
+        filename: &str,
+        output_path: &Path,
+    ) -> Result<u64, PartialZipError> {
+        let file = File::create(output_path)?;
+        let mut writer = BufWriter::new(file);
+        self.download_to_write_with_progressbar(filename, &mut writer)
+    }
+
+    /// Download a single file from the archive to any [`std::io::Write`], showing a progress bar.
+    ///
+    /// This method streams the decompressed content directly to the writer without
+    /// buffering the entire file in memory.
+    ///
+    /// Returns the number of bytes written.
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
@@ -341,14 +414,14 @@ impl PartialZip {
         &self,
         filename: &str,
         writer: &mut dyn std::io::Write,
-    ) -> Result<(), PartialZipError> {
+    ) -> Result<u64, PartialZipError> {
         use indicatif::ProgressBar;
 
         let mut archive = self.archive.borrow_mut();
         let file = archive.by_name(filename)?;
         let pb = ProgressBar::new(file.compressed_size());
-        io::copy(&mut pb.wrap_read(file), writer)?;
-        Ok(())
+        let bytes_written = io::copy(&mut pb.wrap_read(file), writer)?;
+        Ok(bytes_written)
     }
 }
 

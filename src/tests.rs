@@ -148,6 +148,39 @@ mod partzip_tests {
     }
 
     #[tokio::test]
+    /// Test download_to_file streams directly to disk
+    async fn test_download_to_file() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let temp_file = tempfile::NamedTempFile::new()?;
+            let bytes_written = pz.download_to_file("1.txt", temp_file.path())?;
+            assert_eq!(bytes_written, 5); // "AAAA\n" = 5 bytes
+            let content = std::fs::read(temp_file.path())?;
+            assert_eq!(content, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
+    #[cfg(feature = "progressbar")]
+    #[tokio::test]
+    /// Test download_to_file_with_progressbar streams directly to disk
+    async fn test_download_to_file_with_progressbar() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let temp_file = tempfile::NamedTempFile::new()?;
+            let bytes_written = pz.download_to_file_with_progressbar("1.txt", temp_file.path())?;
+            assert_eq!(bytes_written, 5); // "AAAA\n" = 5 bytes
+            let content = std::fs::read(temp_file.path())?;
+            assert_eq!(content, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
     /// Test that downloading files that are not present in the archive throws an error
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server()?.address;
