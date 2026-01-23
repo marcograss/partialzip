@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 use bytesize::ByteSize;
 use clap::{Parser, Subcommand};
-use partialzip::partzip::PartialZip;
+use partialzip::partzip::{PartialZip, PartialZipOptions, DEFAULT_MAX_REDIRECTS};
 use std::fs::File;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
+fn list(url: &str, detailed: bool, options: PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for listing")?;
-    let pz = PartialZip::new_check_range(&url, check_range)
+    let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for listing")?;
     if detailed {
         pz.list_detailed().into_iter().for_each(|f| {
@@ -26,9 +26,9 @@ fn list(url: &str, detailed: bool, check_range: bool) -> Result<()> {
 }
 
 /// Handler to download the file from command line
-fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> Result<()> {
+fn download(url: &str, filename: &str, outputfile: &str, options: PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for downloading")?;
-    let pz = PartialZip::new_check_range(&url, check_range)
+    let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for downloading")?;
     let mut f = File::create_new(outputfile).context("cannot create the output file")?;
     #[cfg(feature = "progressbar")]
@@ -42,9 +42,9 @@ fn download(url: &str, filename: &str, outputfile: &str, check_range: bool) -> R
 }
 
 /// Handler to download the file and pipe it to stdout
-fn pipe(url: &str, filename: &str, check_range: bool) -> Result<()> {
+fn pipe(url: &str, filename: &str, options: PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for piping")?;
-    let pz = PartialZip::new_check_range(&url, check_range)
+    let pz = PartialZip::new_with_options(&url, options)
         .context("Cannot create PartialZip instance for piping")?;
     pz.download_to_write(filename, &mut std::io::stdout())
         .context("download failed")?;
@@ -57,6 +57,9 @@ struct Cli {
     /// Require using url with range support
     #[arg(short = 'r', long)]
     check_range: bool,
+    /// Maximum number of HTTP redirects to follow
+    #[arg(short = 'm', long, default_value_t = DEFAULT_MAX_REDIRECTS)]
+    max_redirects: u32,
     #[command(subcommand)]
     command: Commands,
 }
@@ -85,13 +88,17 @@ fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
+    let options = PartialZipOptions::new()
+        .check_range(cli.check_range)
+        .max_redirects(cli.max_redirects);
+
     match cli.command {
-        Commands::List { detailed, url } => list(&url, detailed, cli.check_range),
+        Commands::List { detailed, url } => list(&url, detailed, options),
         Commands::Download {
             url,
             filename,
             outputfile,
-        } => download(&url, &filename, &outputfile, cli.check_range),
-        Commands::Pipe { url, filename } => pipe(&url, &filename, cli.check_range),
+        } => download(&url, &filename, &outputfile, options),
+        Commands::Pipe { url, filename } => pipe(&url, &filename, options),
     }
 }

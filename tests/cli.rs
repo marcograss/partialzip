@@ -23,6 +23,13 @@ mod cli_tests {
             .success()
             .stdout(predicate::str::contains("Usage"));
 
+        // Verify --max-redirects flag is documented in help
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--help");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("--max-redirects"));
+
         let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("list");
         cmd.assert().failure().stderr(
@@ -106,6 +113,30 @@ mod cli_tests {
         let mut cmd = Command::new(cargo_bin!("partialzip"));
         cmd.arg("pipe").arg(&target_arg).arg("1.txt");
         cmd.assert().success();
+
+        // Test --max-redirects flag with short form
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("-m").arg("5").arg("list").arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
+
+        // Test --max-redirects flag with long form
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("--max-redirects")
+            .arg("20")
+            .arg("list")
+            .arg(&target_arg);
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains("1.txt\n"));
+
+        // Test combining -r and -m flags
+        let mut cmd = Command::new(cargo_bin!("partialzip"));
+        cmd.arg("-r").arg("-m").arg("5").arg("list").arg(&target_arg);
+        cmd.assert()
+            .failure()
+            .stderr(predicate::str::contains("Range request not supported\n"));
 
         Ok(())
     }

@@ -40,7 +40,10 @@ mod partzip_tests {
 
     use actix_web::{App, HttpResponse, HttpServer};
 
-    use crate::partzip::{PartialZip, PartialZipError, PartialZipFileDetailed};
+    use crate::partzip::{
+        PartialZip, PartialZipError, PartialZipFileDetailed, PartialZipOptions,
+        DEFAULT_MAX_REDIRECTS,
+    };
 
     use anyhow::Result;
 
@@ -323,6 +326,69 @@ mod partzip_tests {
                     }
                 ]
             );
+            Ok(())
+        })
+        .await?
+    }
+
+    #[test]
+    /// Test that PartialZipOptions has correct default values
+    fn test_options_defaults() {
+        let options = PartialZipOptions::default();
+        assert!(!options.check_range);
+        assert_eq!(options.max_redirects, DEFAULT_MAX_REDIRECTS);
+        assert_eq!(options.max_redirects, 10);
+    }
+
+    #[test]
+    /// Test that PartialZipOptions builder methods work correctly
+    fn test_options_builder() {
+        let options = PartialZipOptions::new()
+            .check_range(true)
+            .max_redirects(5);
+        assert!(options.check_range);
+        assert_eq!(options.max_redirects, 5);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    /// Test that new_with_options works correctly
+    fn test_new_with_options() -> Result<()> {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("testdata/test.zip");
+        let url = format!("file://localhost{}", d.display());
+        let options = PartialZipOptions::new().max_redirects(5);
+        let pz = PartialZip::new_with_options(&url, options)?;
+        assert_eq!(url, pz.url());
+        Ok(())
+    }
+
+    #[tokio::test]
+    /// Test that max_redirects = 0 prevents following redirects
+    async fn test_max_redirects_zero_blocks_redirect() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let options = PartialZipOptions::new().max_redirects(0);
+            let redirect_url = address.join("/redirect").expect("valid URL");
+            let pz = PartialZip::new_with_options(&redirect_url, options);
+            // With max_redirects = 0, following the redirect should fail
+            assert!(pz.is_err(), "should fail when max_redirects is 0 and URL redirects");
+        })
+        .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    /// Test that new_with_options works with the test server
+    async fn test_new_with_options_http() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let options = PartialZipOptions::new()
+                .check_range(true)
+                .max_redirects(10);
+            let pz = PartialZip::new_with_options(&address.join("/files/test.zip")?, options)?;
+            let downloaded = pz.download("1.txt")?;
+            assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             Ok(())
         })
         .await?

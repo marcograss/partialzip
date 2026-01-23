@@ -50,6 +50,49 @@ pub enum PartialZipError {
     ConvError(#[from] conv::PosOverflow<u64>),
 }
 
+/// Default maximum number of HTTP redirects to follow
+pub const DEFAULT_MAX_REDIRECTS: u32 = 10;
+
+/// Options for configuring [`PartialZip`] and [`PartialReader`] behavior
+#[derive(Debug, Clone, Copy)]
+pub struct PartialZipOptions {
+    /// Whether to verify that the server supports HTTP Range requests
+    pub check_range: bool,
+    /// Maximum number of HTTP redirects to follow (prevents redirect loops and SSRF attacks)
+    pub max_redirects: u32,
+}
+
+impl Default for PartialZipOptions {
+    fn default() -> Self {
+        Self {
+            check_range: false,
+            max_redirects: DEFAULT_MAX_REDIRECTS,
+        }
+    }
+}
+
+impl PartialZipOptions {
+    /// Create new options with default values
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set whether to check for range request support
+    #[must_use]
+    pub const fn check_range(mut self, check: bool) -> Self {
+        self.check_range = check;
+        self
+    }
+
+    /// Set the maximum number of redirects to follow
+    #[must_use]
+    pub const fn max_redirects(mut self, max: u32) -> Self {
+        self.max_redirects = max;
+        self
+    }
+}
+
 /// Core struct of the crate representing a zip file we want to access partially
 #[derive(Debug)]
 pub struct PartialZip {
@@ -105,20 +148,31 @@ pub struct PartialZipFileDetailed {
 }
 
 impl PartialZip {
-    /// Create a new [`PartialZip`]
+    /// Create a new [`PartialZip`] with default options
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        Self::new_check_range(url, false)
+        Self::new_with_options(url, PartialZipOptions::default())
     }
 
-    /// Create a new [`PartialZip`]
+    /// Create a new [`PartialZip`] with range checking option
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
-        let reader = PartialReader::new_check_range(url, check_range)?;
+        Self::new_with_options(url, PartialZipOptions::default().check_range(check_range))
+    }
+
+    /// Create a new [`PartialZip`] with custom options
+    /// # Errors
+    ///
+    /// Will return a [`PartialZipError`] enum depending on what error happened
+    pub fn new_with_options(
+        url: &dyn ToString,
+        options: PartialZipOptions,
+    ) -> Result<Self, PartialZipError> {
+        let reader = PartialReader::new_with_options(url, options)?;
         let file_size = reader.file_size;
         // higher capacity BufReader has better performances
         let bufreader = BufReader::with_capacity(0x0010_0000, reader);
@@ -272,18 +326,30 @@ pub struct PartialReader {
 const HTTP_PARTIAL_CONTENT: u32 = 206;
 
 impl PartialReader {
-    /// Creates a new [`PartialReader`]
+    /// Creates a new [`PartialReader`] with default options
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
-        Self::new_check_range(url, false)
+        Self::new_with_options(url, PartialZipOptions::default())
     }
-    /// Creates a new [`PartialReader`]
+
+    /// Creates a new [`PartialReader`] with range checking option
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
+        Self::new_with_options(url, PartialZipOptions::default().check_range(check_range))
+    }
+
+    /// Creates a new [`PartialReader`] with custom options
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] enum depending on what happened
+    pub fn new_with_options(
+        url: &dyn ToString,
+        options: PartialZipOptions,
+    ) -> Result<Self, PartialZipError> {
         let url = &url.to_string();
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
@@ -292,6 +358,7 @@ impl PartialReader {
         let mut easy = Easy::new();
         easy.url(url)?;
         easy.follow_location(true)?;
+        easy.max_redirections(options.max_redirects)?;
         easy.tcp_keepalive(true)?;
         easy.tcp_keepidle(Duration::from_secs(120))?;
         easy.tcp_keepintvl(Duration::from_secs(60))?;
@@ -303,7 +370,7 @@ impl PartialReader {
             .to_u64()
             .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
 
-        if check_range {
+        if options.check_range {
             // check if range-request is possible by request 1 byte. if 206 Partial Content (HTTP_PARTIAL_CONTENT) is returned, we can make future request.
             easy.range("0-0")?;
             easy.nobody(true)?;

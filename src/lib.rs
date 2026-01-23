@@ -23,6 +23,8 @@ pub use partzip::PartialZip;
 pub use partzip::PartialZipCompressionMethod;
 pub use partzip::PartialZipError;
 pub use partzip::PartialZipFileDetailed;
+pub use partzip::PartialZipOptions;
+pub use partzip::DEFAULT_MAX_REDIRECTS;
 /// Small utilities mostly for URLs
 mod utils;
 
