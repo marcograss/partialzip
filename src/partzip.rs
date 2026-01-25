@@ -224,7 +224,7 @@ impl PartialZip {
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
-    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+    pub fn new(url: &str) -> Result<Self, PartialZipError> {
         Self::new_with_options(url, &PartialZipOptions::default())
     }
 
@@ -232,7 +232,7 @@ impl PartialZip {
     /// # Errors
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
-    pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
+    pub fn new_check_range(url: &str, check_range: bool) -> Result<Self, PartialZipError> {
         Self::new_with_options(url, &PartialZipOptions::default().check_range(check_range))
     }
 
@@ -241,7 +241,7 @@ impl PartialZip {
     ///
     /// Will return a [`PartialZipError`] enum depending on what error happened
     pub fn new_with_options(
-        url: &dyn ToString,
+        url: &str,
         options: &PartialZipOptions,
     ) -> Result<Self, PartialZipError> {
         let reader = PartialReader::new_with_options(url, options)?;
@@ -250,7 +250,7 @@ impl PartialZip {
         let bufreader = BufReader::with_capacity(0x0010_0000, reader);
         let archive = ZipArchive::new(bufreader)?;
         Ok(Self {
-            url: url.to_string(),
+            url: url.to_owned(),
             archive: RefCell::new(archive),
             file_size,
         })
@@ -551,7 +551,7 @@ impl PartialReader {
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
-    pub fn new(url: &dyn ToString) -> Result<Self, PartialZipError> {
+    pub fn new(url: &str) -> Result<Self, PartialZipError> {
         Self::new_with_options(url, &PartialZipOptions::default())
     }
 
@@ -559,7 +559,7 @@ impl PartialReader {
     ///
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
-    pub fn new_check_range(url: &dyn ToString, check_range: bool) -> Result<Self, PartialZipError> {
+    pub fn new_check_range(url: &str, check_range: bool) -> Result<Self, PartialZipError> {
         Self::new_with_options(url, &PartialZipOptions::default().check_range(check_range))
     }
 
@@ -568,10 +568,9 @@ impl PartialReader {
     /// # Errors
     /// Will return a [`PartialZipError`] enum depending on what happened
     pub fn new_with_options(
-        url: &dyn ToString,
+        url: &str,
         options: &PartialZipOptions,
     ) -> Result<Self, PartialZipError> {
-        let url = &url.to_string();
         if !utils::url_is_valid(url) {
             return Err(PartialZipError::InvalidUrl);
         }
@@ -629,7 +628,7 @@ impl PartialReader {
             easy.nobody(false)?;
         }
         Ok(Self {
-            url: url.clone(),
+            url: url.to_owned(),
             file_size,
             easy,
             pos: 0,

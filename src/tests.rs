@@ -82,7 +82,7 @@ mod partzip_tests {
     async fn test_list() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let list = pz.list_detailed();
             assert_eq!(
                 list,
@@ -121,7 +121,7 @@ mod partzip_tests {
     async fn test_download() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             let downloaded = pz.download("2.txt")?;
@@ -137,7 +137,7 @@ mod partzip_tests {
     async fn test_download_progressbar() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let downloaded = pz.download_with_progressbar("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             let downloaded = pz.download_with_progressbar("2.txt")?;
@@ -152,7 +152,7 @@ mod partzip_tests {
     async fn test_download_to_file() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let temp_file = tempfile::NamedTempFile::new()?;
             let bytes_written = pz.download_to_file("1.txt", temp_file.path())?;
             assert_eq!(bytes_written, 5); // "AAAA\n" = 5 bytes
@@ -169,7 +169,7 @@ mod partzip_tests {
     async fn test_download_to_file_with_progressbar() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let temp_file = tempfile::NamedTempFile::new()?;
             let bytes_written = pz.download_to_file_with_progressbar("1.txt", temp_file.path())?;
             assert_eq!(bytes_written, 5); // "AAAA\n" = 5 bytes
@@ -185,7 +185,7 @@ mod partzip_tests {
     async fn test_download_invalid_file() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let downloaded = pz.download("414141.txt");
             assert!(
                 matches!(
@@ -205,9 +205,10 @@ mod partzip_tests {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
             let pz = PartialZip::new(
-                &address
+                address
                     .join("/files/invalid.zip")
-                    .expect("cannot join invalid URL"),
+                    .expect("cannot join invalid URL")
+                    .as_str(),
             );
             assert!(
                 matches!(
@@ -226,7 +227,7 @@ mod partzip_tests {
     async fn test_invalid_url() -> Result<()> {
         spawn_server()?;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&"invalid URL");
+            let pz = PartialZip::new("invalid URL");
             assert!(
                 matches!(pz, Err(PartialZipError::InvalidUrl)),
                 "didn't throw an error with invalid URL"
@@ -320,7 +321,7 @@ mod partzip_tests {
     async fn test_range_support() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new_check_range(&address.join("/files/test.zip")?, true)?;
+            let pz = PartialZip::new_check_range(address.join("/files/test.zip")?.as_str(), true)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             Ok(())
@@ -333,7 +334,7 @@ mod partzip_tests {
     async fn test_redirect() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/redirect")?)?;
+            let pz = PartialZip::new(address.join("/redirect")?.as_str())?;
             let list = pz.list_detailed();
             assert_eq!(
                 list,
@@ -493,7 +494,7 @@ mod partzip_tests {
         tokio::task::spawn_blocking(move || {
             let options = PartialZipOptions::new().max_redirects(0);
             let redirect_url = address.join("/redirect").expect("valid URL");
-            let pz = PartialZip::new_with_options(&redirect_url, &options);
+            let pz = PartialZip::new_with_options(redirect_url.as_str(), &options);
             // With max_redirects = 0, following the redirect should fail
             assert!(pz.is_err(), "should fail when max_redirects is 0 and URL redirects");
         })
@@ -509,7 +510,7 @@ mod partzip_tests {
             let options = PartialZipOptions::new()
                 .check_range(true)
                 .max_redirects(10);
-            let pz = PartialZip::new_with_options(&address.join("/files/test.zip")?, &options)?;
+            let pz = PartialZip::new_with_options(address.join("/files/test.zip")?.as_str(), &options)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             Ok(())
@@ -522,7 +523,7 @@ mod partzip_tests {
     async fn test_download_multiple() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let results = pz.download_multiple(&["1.txt", "2.txt"])?;
 
             assert_eq!(results.len(), 2);
@@ -540,7 +541,7 @@ mod partzip_tests {
     async fn test_download_multiple_to_dir() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let temp_dir = tempfile::tempdir()?;
             let total_bytes = pz.download_multiple_to_dir(&["1.txt", "2.txt"], temp_dir.path())?;
 
@@ -564,7 +565,7 @@ mod partzip_tests {
     async fn test_download_multiple_to_dir_with_progressbar() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let pz = PartialZip::new(&address.join("/files/test.zip")?)?;
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
             let temp_dir = tempfile::tempdir()?;
             let total_bytes =
                 pz.download_multiple_to_dir_with_progressbar(&["1.txt", "2.txt"], temp_dir.path())?;

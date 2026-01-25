@@ -11,7 +11,7 @@ use url::Url;
 /// Handler to list the files from command line
 fn list(url: &str, detailed: bool, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for listing")?;
-    let pz = PartialZip::new_with_options(&url, options)
+    let pz = PartialZip::new_with_options(url.as_str(), options)
         .context("Cannot create PartialZip instance for listing")?;
     if detailed {
         pz.list_detailed().into_iter().for_each(|f| {
@@ -31,7 +31,7 @@ fn list(url: &str, detailed: bool, options: &PartialZipOptions) -> Result<()> {
 /// Handler to download the file from command line
 fn download(url: &str, filename: &str, outputfile: &str, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for downloading")?;
-    let pz = PartialZip::new_with_options(&url, options)
+    let pz = PartialZip::new_with_options(url.as_str(), options)
         .context("Cannot create PartialZip instance for downloading")?;
     let mut f = File::create_new(outputfile).context("cannot create the output file")?;
     #[cfg(feature = "progressbar")]
@@ -47,7 +47,7 @@ fn download(url: &str, filename: &str, outputfile: &str, options: &PartialZipOpt
 /// Handler to download the file and pipe it to stdout
 fn pipe(url: &str, filename: &str, options: &PartialZipOptions) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for piping")?;
-    let pz = PartialZip::new_with_options(&url, options)
+    let pz = PartialZip::new_with_options(url.as_str(), options)
         .context("Cannot create PartialZip instance for piping")?;
     pz.download_to_write(filename, &mut std::io::stdout())
         .context("download failed")?;
