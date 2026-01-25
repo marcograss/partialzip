@@ -110,35 +110,35 @@ impl PartialZipOptions {
 
     /// Set whether to check for range request support
     #[must_use]
-    pub fn check_range(mut self, check: bool) -> Self {
+    pub const fn check_range(mut self, check: bool) -> Self {
         self.check_range = check;
         self
     }
 
     /// Set the maximum number of redirects to follow
     #[must_use]
-    pub fn max_redirects(mut self, max: u32) -> Self {
+    pub const fn max_redirects(mut self, max: u32) -> Self {
         self.max_redirects = max;
         self
     }
 
     /// Set the connection timeout (None = no timeout)
     #[must_use]
-    pub fn connect_timeout(mut self, timeout: Option<Duration>) -> Self {
+    pub const fn connect_timeout(mut self, timeout: Option<Duration>) -> Self {
         self.connect_timeout = timeout;
         self
     }
 
     /// Set the TCP keep-alive idle time before sending probes
     #[must_use]
-    pub fn tcp_keepidle(mut self, duration: Duration) -> Self {
+    pub const fn tcp_keepidle(mut self, duration: Duration) -> Self {
         self.tcp_keepidle = duration;
         self
     }
 
     /// Set the TCP keep-alive interval between probes
     #[must_use]
-    pub fn tcp_keepintvl(mut self, duration: Duration) -> Self {
+    pub const fn tcp_keepintvl(mut self, duration: Duration) -> Self {
         self.tcp_keepintvl = duration;
         self
     }

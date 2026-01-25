@@ -148,7 +148,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
-    /// Test download_to_file streams directly to disk
+    /// Test `download_to_file` streams directly to disk
     async fn test_download_to_file() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -165,7 +165,7 @@ mod partzip_tests {
 
     #[cfg(feature = "progressbar")]
     #[tokio::test]
-    /// Test download_to_file_with_progressbar streams directly to disk
+    /// Test `download_to_file_with_progressbar` streams directly to disk
     async fn test_download_to_file_with_progressbar() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -368,7 +368,7 @@ mod partzip_tests {
     }
 
     #[test]
-    /// Test that PartialZipOptions has correct default values
+    /// Test that `PartialZipOptions` has correct default values
     fn test_options_defaults() {
         let options = PartialZipOptions::default();
         assert!(!options.check_range);
@@ -392,7 +392,7 @@ mod partzip_tests {
     }
 
     #[test]
-    /// Test that PartialZipOptions builder methods work correctly
+    /// Test that `PartialZipOptions` builder methods work correctly
     fn test_options_builder() {
         let options = PartialZipOptions::new()
             .check_range(true)
@@ -412,7 +412,7 @@ mod partzip_tests {
     }
 
     #[test]
-    /// Test that basic_auth builder method works correctly
+    /// Test that `basic_auth` builder method works correctly
     fn test_options_basic_auth() {
         let options = PartialZipOptions::new().basic_auth("user", "pass");
         assert_eq!(
@@ -441,7 +441,7 @@ mod partzip_tests {
     }
 
     #[test]
-    /// Test that proxy_auth builder method works correctly
+    /// Test that `proxy_auth` builder method works correctly
     fn test_options_proxy_auth() {
         let options = PartialZipOptions::new().proxy_auth("proxyuser", "proxypass");
         assert_eq!(
@@ -475,7 +475,7 @@ mod partzip_tests {
 
     #[cfg(unix)]
     #[test]
-    /// Test that new_with_options works correctly
+    /// Test that `new_with_options` works correctly
     fn test_new_with_options() -> Result<()> {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/test.zip");
@@ -487,7 +487,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
-    /// Test that max_redirects = 0 prevents following redirects
+    /// Test that `max_redirects` = 0 prevents following redirects
     async fn test_max_redirects_zero_blocks_redirect() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
@@ -502,7 +502,7 @@ mod partzip_tests {
     }
 
     #[tokio::test]
-    /// Test that new_with_options works with the test server
+    /// Test that `new_with_options` works with the test server
     async fn test_new_with_options_http() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {

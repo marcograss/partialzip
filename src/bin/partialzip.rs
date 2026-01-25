@@ -72,7 +72,7 @@ struct Cli {
     /// Password for basic authentication
     #[arg(short = 'p', long)]
     password: Option<String>,
-    /// Proxy URL (e.g., http://proxy:8080, socks5://proxy:1080)
+    /// Proxy URL (e.g., `http://proxy:8080`, `socks5://proxy:1080`)
     #[arg(long)]
     proxy: Option<String>,
     /// Proxy username
