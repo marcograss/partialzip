@@ -496,7 +496,10 @@ mod partzip_tests {
             let redirect_url = address.join("/redirect").expect("valid URL");
             let pz = PartialZip::new_with_options(redirect_url.as_str(), &options);
             // With max_redirects = 0, following the redirect should fail
-            assert!(pz.is_err(), "should fail when max_redirects is 0 and URL redirects");
+            assert!(
+                pz.is_err(),
+                "should fail when max_redirects is 0 and URL redirects"
+            );
         })
         .await?;
         Ok(())
@@ -507,10 +510,9 @@ mod partzip_tests {
     async fn test_new_with_options_http() -> Result<()> {
         let address = spawn_server()?.address;
         tokio::task::spawn_blocking(move || {
-            let options = PartialZipOptions::new()
-                .check_range(true)
-                .max_redirects(10);
-            let pz = PartialZip::new_with_options(address.join("/files/test.zip")?.as_str(), &options)?;
+            let options = PartialZipOptions::new().check_range(true).max_redirects(10);
+            let pz =
+                PartialZip::new_with_options(address.join("/files/test.zip")?.as_str(), &options)?;
             let downloaded = pz.download("1.txt")?;
             assert_eq!(downloaded, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
             Ok(())

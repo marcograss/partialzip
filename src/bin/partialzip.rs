@@ -29,7 +29,12 @@ fn list(url: &str, detailed: bool, options: &PartialZipOptions) -> Result<()> {
 }
 
 /// Handler to download the file from command line
-fn download(url: &str, filename: &str, outputfile: &str, options: &PartialZipOptions) -> Result<()> {
+fn download(
+    url: &str,
+    filename: &str,
+    outputfile: &str,
+    options: &PartialZipOptions,
+) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for downloading")?;
     let pz = PartialZip::new_with_options(url.as_str(), options)
         .context("Cannot create PartialZip instance for downloading")?;

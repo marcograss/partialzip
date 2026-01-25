@@ -8,7 +8,10 @@ mod cli_tests {
 
     #[test]
     fn binary_exists() {
-        assert!(assert_cmd::cargo_bin!("partialzip").exists(), "binary exists");
+        assert!(
+            assert_cmd::cargo_bin!("partialzip").exists(),
+            "binary exists"
+        );
     }
 
     #[test]
@@ -156,7 +159,11 @@ mod cli_tests {
 
         // Test combining -r and -m flags
         let mut cmd = Command::new(assert_cmd::cargo_bin!("partialzip"));
-        cmd.arg("-r").arg("-m").arg("5").arg("list").arg(&target_arg);
+        cmd.arg("-r")
+            .arg("-m")
+            .arg("5")
+            .arg("list")
+            .arg(&target_arg);
         cmd.assert()
             .failure()
             .stderr(predicate::str::contains("Range request not supported\n"));
