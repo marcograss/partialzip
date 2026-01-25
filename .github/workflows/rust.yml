@@ -10,16 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  clippy:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+    - uses: Swatinem/rust-cache@v2
+    - name: Clippy Pedantic and others
+      run: cargo clippy --all-targets --all-features -- -D clippy::nursery -D clippy::all -D clippy::pedantic
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: mozilla-actions/sccache-action@v0.0.7
+    - uses: Swatinem/rust-cache@v2
     - uses: taiki-e/install-action@cargo-hack
     - name: Cargo hack build
       run: cargo hack --each-feature build --verbose
+      env:
+        RUSTC_WRAPPER: sccache
     - name: Cargo hack test
-      run: cargo clean && cargo hack --each-feature test --verbose
-    - name: Clippy Pedantic and others
-      run: cargo clippy --all-targets --all-features -- -D clippy::nursery -D clippy::all -D clippy::pedantic
+      run: cargo hack --each-feature test --verbose
+      env:
+        RUSTC_WRAPPER: sccache
