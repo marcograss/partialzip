@@ -713,7 +713,7 @@ impl io::Read for PartialReader {
             transfer.perform()?;
         };
 
-        let n = io::Read::read(&mut content[..].as_ref(), buf)?;
+        let n = io::Read::read(&mut content.as_slice(), buf)?;
         // new position = position + read amount;
         self.pos = self
             .pos
