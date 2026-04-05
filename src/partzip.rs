@@ -493,6 +493,26 @@ impl PartialZip {
             .collect()
     }
 
+    /// Check that filenames don't produce duplicate output basenames when written to a directory
+    fn check_duplicate_basenames(filenames: &[&str]) -> Result<(), PartialZipError> {
+        let mut seen = std::collections::HashSet::new();
+        for filename in filenames {
+            let basename = Path::new(filename)
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new(filename));
+            if !seen.insert(basename.to_owned()) {
+                return Err(PartialZipError::IOError(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    format!(
+                        "duplicate output filename '{}' from archive entry '{filename}'",
+                        basename.to_string_lossy()
+                    ),
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// Download multiple files from the archive to a directory, streaming to disk.
     ///
     /// This method efficiently reuses the underlying connection for all downloads
@@ -504,12 +524,14 @@ impl PartialZip {
     /// Returns the total number of bytes written across all files.
     ///
     /// # Errors
-    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    /// Will return a [`PartialZipError`] if any file fails to download or if multiple
+    /// archive entries would produce the same output filename.
     pub fn download_multiple_to_dir(
         &self,
         filenames: &[&str],
         output_dir: &Path,
     ) -> Result<u64, PartialZipError> {
+        Self::check_duplicate_basenames(filenames)?;
         let mut total_bytes = 0u64;
         for filename in filenames {
             // Extract just the filename component (handle paths in archive)
@@ -537,6 +559,7 @@ impl PartialZip {
         filenames: &[&str],
         output_dir: &Path,
     ) -> Result<u64, PartialZipError> {
+        Self::check_duplicate_basenames(filenames)?;
         let mut total_bytes = 0u64;
         for filename in filenames {
             let output_name = Path::new(filename)
@@ -677,6 +700,7 @@ impl PartialZip {
         if filenames.is_empty() {
             return Ok(0);
         }
+        Self::check_duplicate_basenames(filenames)?;
         let url = &self.url;
         let options = &self.options;
         let max_concurrent = max_concurrent.max(1).min(filenames.len());
@@ -838,6 +862,7 @@ impl PartialReader {
 
 impl io::Read for PartialReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
         log::trace!(
             "read self.pos = {:x} self.file_size = {:x}",
             self.pos,
@@ -890,14 +915,15 @@ impl io::Read for PartialReader {
         self.easy.range(&range)?;
         self.easy.get(true)?;
 
-        let max_attempts = self.max_retries + 1;
+        let max_attempts = self.max_retries.saturating_add(1);
         let mut last_error = None;
 
         for attempt in 0..max_attempts {
             if attempt > 0 {
                 let delay = self
                     .retry_base_delay
-                    .saturating_mul(2u32.saturating_pow(attempt - 1));
+                    .saturating_mul(2u32.saturating_pow(attempt - 1))
+                    .min(MAX_RETRY_DELAY);
                 log::warn!(
                     "Retrying request (attempt {}/{max_attempts}) after {delay:?}",
                     attempt + 1
