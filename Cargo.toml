@@ -16,7 +16,7 @@ rust-version = "1.83.0"
 version = "6.0.0"
 
 [features]
-cmdline = ["dep:anyhow", "dep:clap", "dep:env_logger"]
+cmdline = ["dep:anyhow", "dep:clap", "dep:env_logger", "dep:serde_json"]
 default = ["cmdline", "progressbar"]
 progressbar = ["dep:indicatif"]
 rustls = ["curl/rustls"]
@@ -38,13 +38,12 @@ anyhow = {version = "1.0.100", optional = true}
 bytesize = "2.3.1"
 chrono = { version = "0.4.43", features = ["serde"] }
 clap = {version = "4.5.54", features = ["derive"], optional = true}
-conv = "0.3.3"
 curl = {version = "0.4.49", default-features = false}
 env_logger = {version = "0.11.8", optional = true}
 indicatif = {version = "0.18.3", optional = true}
 log = "0.4.29"
-num-traits = "0.2.19"
 serde = { version = "1.0.228", features = ["derive"] }
+serde_json = {version = "1", optional = true}
 thiserror = "2.0.18"
 url = "2.5.8"
 zip = {version = "7", default-features = false, features = ["bzip2", "deflate", "zstd"]}

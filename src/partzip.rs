@@ -1,9 +1,7 @@
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use chrono::NaiveTime;
-use conv::{NoError, ValueFrom};
 use curl::easy::Easy;
-use num_traits::ToPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 use std::cell::RefCell;
@@ -45,12 +43,6 @@ pub enum PartialZipError {
     /// Error for CURL
     #[error("CURL error: {0}")]
     CURLError(#[from] curl::Error),
-    /// `NoError` error
-    #[error("NoError error: {0}")]
-    NoError(#[from] NoError),
-    /// Conversion Error
-    #[error("Conversion error: {0}")]
-    ConvError(#[from] conv::PosOverflow<u64>),
 }
 
 /// Default maximum number of HTTP redirects to follow
@@ -84,6 +76,10 @@ pub struct PartialZipOptions {
     pub proxy: Option<String>,
     /// Proxy authentication credentials (username, password)
     pub proxy_auth: Option<(String, String)>,
+    /// Maximum number of retries for transient network errors (0 = no retries)
+    pub max_retries: u32,
+    /// Base delay between retries (doubles with each attempt for exponential backoff)
+    pub retry_base_delay: Duration,
 }
 
 impl Default for PartialZipOptions {
@@ -97,6 +93,8 @@ impl Default for PartialZipOptions {
             basic_auth: None,
             proxy: None,
             proxy_auth: None,
+            max_retries: 0,
+            retry_base_delay: Duration::from_secs(1),
         }
     }
 }
@@ -163,6 +161,20 @@ impl PartialZipOptions {
         self.proxy_auth = Some((username.to_string(), password.to_string()));
         self
     }
+
+    /// Set the maximum number of retries for transient network errors (0 = disabled)
+    #[must_use]
+    pub const fn max_retries(mut self, max: u32) -> Self {
+        self.max_retries = max;
+        self
+    }
+
+    /// Set the base delay between retries (doubles with each attempt for exponential backoff)
+    #[must_use]
+    pub const fn retry_base_delay(mut self, delay: Duration) -> Self {
+        self.retry_base_delay = delay;
+        self
+    }
 }
 
 /// Core struct of the crate representing a zip file we want to access partially
@@ -174,6 +186,8 @@ pub struct PartialZip {
     archive: RefCell<ZipArchive<BufReader<PartialReader>>>,
     /// The archive size
     file_size: u64,
+    /// Configuration options (stored for creating parallel connections)
+    options: PartialZipOptions,
 }
 
 /// Compression methods for the files inside the archive. Redefined structure to make it serializable.
@@ -253,6 +267,7 @@ impl PartialZip {
             url: url.to_owned(),
             archive: RefCell::new(archive),
             file_size,
+            options: options.clone(),
         })
     }
 
@@ -532,6 +547,174 @@ impl PartialZip {
         }
         Ok(total_bytes)
     }
+
+    /// Returns the options used to create this [`PartialZip`]
+    #[must_use]
+    pub const fn options(&self) -> &PartialZipOptions {
+        &self.options
+    }
+
+    /// Get a list of filenames matching a glob pattern (supports `*` and `?`)
+    pub fn list_names_matching(&self, pattern: &str) -> Vec<String> {
+        self.list_names()
+            .into_iter()
+            .filter(|name| super::utils::glob_match(pattern, name))
+            .collect()
+    }
+
+    /// Get a list of files with details matching a glob pattern (supports `*` and `?`)
+    pub fn list_detailed_matching(&self, pattern: &str) -> Vec<PartialZipFileDetailed> {
+        self.list_detailed()
+            .into_iter()
+            .filter(|f| super::utils::glob_match(pattern, &f.name))
+            .collect()
+    }
+
+    /// Download all files matching a glob pattern into memory.
+    ///
+    /// Returns a vector of tuples containing the filename and its content.
+    /// Pattern supports `*` (any sequence) and `?` (any single char).
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    pub fn download_matching(
+        &self,
+        pattern: &str,
+    ) -> Result<Vec<(String, Vec<u8>)>, PartialZipError> {
+        let matching: Vec<String> = self.list_names_matching(pattern);
+        let refs: Vec<&str> = matching.iter().map(String::as_str).collect();
+        self.download_multiple(&refs)
+    }
+
+    /// Download all files matching a glob pattern to a directory.
+    ///
+    /// Pattern supports `*` (any sequence) and `?` (any single char).
+    /// Returns the total number of bytes written.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    pub fn download_matching_to_dir(
+        &self,
+        pattern: &str,
+        output_dir: &Path,
+    ) -> Result<u64, PartialZipError> {
+        let matching: Vec<String> = self.list_names_matching(pattern);
+        let refs: Vec<&str> = matching.iter().map(String::as_str).collect();
+        self.download_multiple_to_dir(&refs, output_dir)
+    }
+
+    /// Download multiple files in parallel using separate connections.
+    ///
+    /// Creates up to `max_concurrent` connections to the server and distributes
+    /// files across them. Each connection independently fetches and decompresses
+    /// its assigned files.
+    ///
+    /// Returns a vector of tuples containing the filename and its content.
+    /// Note: file order in the result may differ from the input order.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    pub fn download_multiple_parallel(
+        &self,
+        filenames: &[&str],
+        max_concurrent: usize,
+    ) -> Result<Vec<(String, Vec<u8>)>, PartialZipError> {
+        if filenames.is_empty() {
+            return Ok(Vec::new());
+        }
+        let url = &self.url;
+        let options = &self.options;
+        let max_concurrent = max_concurrent.max(1).min(filenames.len());
+
+        // Distribute files round-robin across workers
+        let mut chunks: Vec<Vec<&str>> = (0..max_concurrent).map(|_| Vec::new()).collect();
+        for (i, filename) in filenames.iter().enumerate() {
+            chunks[i % max_concurrent].push(filename);
+        }
+
+        std::thread::scope(|s| {
+            let handles: Vec<_> = chunks
+                .into_iter()
+                .filter(|c| !c.is_empty())
+                .map(|chunk| {
+                    s.spawn(move || -> Result<Vec<(String, Vec<u8>)>, PartialZipError> {
+                        let pz = Self::new_with_options(url, options)?;
+                        chunk
+                            .iter()
+                            .map(|filename| {
+                                let content = pz.download(filename)?;
+                                Ok(((*filename).to_string(), content))
+                            })
+                            .collect()
+                    })
+                })
+                .collect();
+
+            let mut all_results = Vec::with_capacity(filenames.len());
+            for handle in handles {
+                let results = handle.join().map_err(|_| {
+                    PartialZipError::IOError(io::Error::other("download thread panicked"))
+                })??;
+                all_results.extend(results);
+            }
+            Ok(all_results)
+        })
+    }
+
+    /// Download multiple files in parallel to a directory using separate connections.
+    ///
+    /// Creates up to `max_concurrent` connections and streams each file directly to disk.
+    /// Returns the total number of bytes written.
+    ///
+    /// # Errors
+    /// Will return a [`PartialZipError`] on the first file that fails to download.
+    pub fn download_multiple_to_dir_parallel(
+        &self,
+        filenames: &[&str],
+        output_dir: &Path,
+        max_concurrent: usize,
+    ) -> Result<u64, PartialZipError> {
+        if filenames.is_empty() {
+            return Ok(0);
+        }
+        let url = &self.url;
+        let options = &self.options;
+        let max_concurrent = max_concurrent.max(1).min(filenames.len());
+
+        let mut chunks: Vec<Vec<&str>> = (0..max_concurrent).map(|_| Vec::new()).collect();
+        for (i, filename) in filenames.iter().enumerate() {
+            chunks[i % max_concurrent].push(filename);
+        }
+
+        std::thread::scope(|s| {
+            let handles: Vec<_> = chunks
+                .into_iter()
+                .filter(|c| !c.is_empty())
+                .map(|chunk| {
+                    s.spawn(move || -> Result<u64, PartialZipError> {
+                        let pz = Self::new_with_options(url, options)?;
+                        let mut bytes = 0u64;
+                        for filename in &chunk {
+                            let output_name = Path::new(filename)
+                                .file_name()
+                                .unwrap_or_else(|| std::ffi::OsStr::new(filename));
+                            let output_path = output_dir.join(output_name);
+                            bytes += pz.download_to_file(filename, &output_path)?;
+                        }
+                        Ok(bytes)
+                    })
+                })
+                .collect();
+
+            let mut total_bytes = 0u64;
+            for handle in handles {
+                total_bytes += handle.join().map_err(|_| {
+                    PartialZipError::IOError(io::Error::other("download thread panicked"))
+                })??;
+            }
+            Ok(total_bytes)
+        })
+    }
 }
 
 /// Reader for the partialzip doing only the partial read instead of downloading everything
@@ -542,9 +725,23 @@ pub struct PartialReader {
     file_size: u64,
     easy: Easy,
     pos: u64,
+    max_retries: u32,
+    retry_base_delay: Duration,
 }
 
 const HTTP_PARTIAL_CONTENT: u32 = 206;
+
+/// Extract content length from a curl Easy handle as u64
+fn content_length_as_u64(easy: &mut Easy) -> Result<u64, PartialZipError> {
+    let len = easy.content_length_download()?;
+    if len >= 0.0 && len.is_finite() {
+        // Safety: we've verified len is non-negative and finite
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        Ok(len as u64)
+    } else {
+        Err(std::io::Error::new(ErrorKind::InvalidData, "invalid content length").into())
+    }
+}
 
 impl PartialReader {
     /// Creates a new [`PartialReader`] with default options
@@ -604,19 +801,14 @@ impl PartialReader {
         easy.nobody(true)?;
         easy.write_function(|data| Ok(data.len()))?;
         easy.perform()?;
-        let file_size = easy
-            .content_length_download()?
-            .to_u64()
-            .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "invalid content length"))?;
+        let file_size = content_length_as_u64(&mut easy)?;
 
         if options.check_range {
             // check if range-request is possible by request 1 byte. if 206 Partial Content (HTTP_PARTIAL_CONTENT) is returned, we can make future request.
             easy.range("0-0")?;
             easy.nobody(true)?;
             easy.perform()?;
-            let head_size = easy.content_length_download()?.to_u64().ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, "can not perform range request")
-            })?;
+            let head_size = content_length_as_u64(&mut easy)?;
             if head_size != 1 {
                 return Err(PartialZipError::RangeNotSupported);
             }
@@ -632,6 +824,8 @@ impl PartialReader {
             file_size,
             easy,
             pos: 0,
+            max_retries: options.max_retries,
+            retry_base_delay: options.retry_base_delay,
         })
     }
 
@@ -655,13 +849,9 @@ impl io::Read for PartialReader {
         // start = current position
         let start = self.pos;
         // end candidate = start + buf.len() - 1;
+        let buf_len = buf.len() as u64;
         let maybe_end = start
-            .checked_add(buf.len().to_u64().ok_or_else(|| {
-                std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    format!("The buf len is invalid {}", buf.len()),
-                )
-            })?)
+            .checked_add(buf_len)
             .ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
@@ -700,33 +890,56 @@ impl io::Read for PartialReader {
         self.easy.range(&range)?;
         self.easy.get(true)?;
 
-        let mut content: Vec<u8> = Vec::new();
-        {
-            let mut transfer = self.easy.transfer();
-            transfer.write_function(|data| {
-                log::trace!("transfered {:x} bytes", data.len());
-                content.extend_from_slice(data);
-                Ok(data.len())
-            })?;
+        let max_attempts = self.max_retries + 1;
+        let mut last_error = None;
 
-            transfer.perform()?;
-        };
+        for attempt in 0..max_attempts {
+            if attempt > 0 {
+                let delay = self
+                    .retry_base_delay
+                    .saturating_mul(2u32.saturating_pow(attempt - 1));
+                log::warn!(
+                    "Retrying request (attempt {}/{max_attempts}) after {delay:?}",
+                    attempt + 1
+                );
+                std::thread::sleep(delay);
+            }
 
-        let n = io::Read::read(&mut content.as_slice(), buf)?;
-        // new position = position + read amount;
-        self.pos = self
-            .pos
-            .checked_add(n.to_u64().ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, format!("invalid read amount {n}"))
-            })?)
-            .ok_or_else(|| {
+            let mut content: Vec<u8> = Vec::new();
+            {
+                let mut transfer = self.easy.transfer();
+                transfer.write_function(|data| {
+                    log::trace!("transferred {:x} bytes", data.len());
+                    content.extend_from_slice(data);
+                    Ok(data.len())
+                })?;
+
+                match transfer.perform() {
+                    Ok(()) => {}
+                    Err(e) => {
+                        log::warn!("Request failed: {e}");
+                        last_error = Some(e);
+                        continue;
+                    }
+                }
+            }
+
+            let n = io::Read::read(&mut content.as_slice(), buf)?;
+            // new position = position + read amount;
+            self.pos = self.pos.checked_add(n as u64).ok_or_else(|| {
                 std::io::Error::new(
                     ErrorKind::InvalidData,
                     format!("adding {n} overflows the reader position {}", self.pos),
                 )
             })?;
-        log::trace!("new self.pos = {:x}", self.pos);
-        Ok(n)
+            log::trace!("new self.pos = {:x}", self.pos);
+            return Ok(n);
+        }
+
+        Err(io::Error::other(format!(
+            "request failed after {max_attempts} attempts: {}",
+            last_error.expect("at least one attempt was made")
+        )))
     }
 }
 
@@ -742,18 +955,13 @@ impl io::Seek for PartialReader {
             io::SeekFrom::Current(n) => (self.pos, n),
         };
         log::trace!("seek base_pos = {base_pos:x} offset = {offset:x}");
+        #[allow(clippy::cast_sign_loss)] // offset >= 0 is checked
         let new_pos = if offset >= 0 {
             // position = base position + offset
-            base_pos.checked_add(
-                u64::value_from(offset)
-                    .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
-            )
+            base_pos.checked_add(offset as u64)
         } else {
-            // position = base position - offset
-            base_pos.checked_sub(
-                u64::value_from(offset.wrapping_neg())
-                    .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))?,
-            )
+            // position = base position - |offset|
+            base_pos.checked_sub(offset.unsigned_abs())
         };
         // check if new position is valid
         match new_pos {

@@ -28,6 +28,41 @@ mod utils_tests {
             );
         }
     }
+
+    #[test]
+    /// Test glob pattern matching
+    pub fn glob_match_tests() {
+        // Exact match
+        assert!(crate::utils::glob_match("hello", "hello"));
+        assert!(!crate::utils::glob_match("hello", "world"));
+
+        // Star wildcard
+        assert!(crate::utils::glob_match("*.txt", "file.txt"));
+        assert!(crate::utils::glob_match("*.txt", ".txt"));
+        assert!(!crate::utils::glob_match("*.txt", "file.rs"));
+        assert!(crate::utils::glob_match("kernel*", "kernelcache.release"));
+        assert!(crate::utils::glob_match("*", "anything"));
+        assert!(crate::utils::glob_match("*", ""));
+
+        // Question mark wildcard
+        assert!(crate::utils::glob_match("?.txt", "1.txt"));
+        assert!(!crate::utils::glob_match("?.txt", "12.txt"));
+
+        // Combined patterns
+        assert!(crate::utils::glob_match(
+            "*.release.*",
+            "kernelcache.release.iphone10"
+        ));
+        assert!(crate::utils::glob_match(
+            "dir/*/file.txt",
+            "dir/sub/file.txt"
+        ));
+
+        // Edge cases
+        assert!(crate::utils::glob_match("", ""));
+        assert!(!crate::utils::glob_match("", "notempty"));
+        assert!(!crate::utils::glob_match("notempty", ""));
+    }
 }
 
 #[cfg(test)]
@@ -390,6 +425,8 @@ mod partzip_tests {
             Duration::from_secs(DEFAULT_TCP_KEEPINTVL_SECS)
         );
         assert_eq!(options.tcp_keepintvl, Duration::from_secs(60));
+        assert_eq!(options.max_retries, 0);
+        assert_eq!(options.retry_base_delay, Duration::from_secs(1));
     }
 
     #[test]
@@ -575,6 +612,163 @@ mod partzip_tests {
             assert_eq!(total_bytes, 10);
             assert!(temp_dir.path().join("1.txt").exists());
             assert!(temp_dir.path().join("2.txt").exists());
+            Ok(())
+        })
+        .await?
+    }
+
+    #[test]
+    /// Test that retry options builder methods work correctly
+    fn test_options_retry() {
+        let options = PartialZipOptions::new()
+            .max_retries(3)
+            .retry_base_delay(Duration::from_millis(500));
+        assert_eq!(options.max_retries, 3);
+        assert_eq!(options.retry_base_delay, Duration::from_millis(500));
+    }
+
+    #[tokio::test]
+    /// Test `list_names_matching` with glob patterns
+    async fn test_list_names_matching() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+
+            let matched = pz.list_names_matching("*.txt");
+            assert_eq!(matched.len(), 2);
+
+            let matched = pz.list_names_matching("1.*");
+            assert_eq!(matched, vec!["1.txt".to_string()]);
+
+            let matched = pz.list_names_matching("?.txt");
+            assert_eq!(matched.len(), 2);
+
+            let matched = pz.list_names_matching("nope*");
+            assert!(matched.is_empty());
+
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test `list_detailed_matching` with glob patterns
+    async fn test_list_detailed_matching() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+
+            let matched = pz.list_detailed_matching("1.*");
+            assert_eq!(matched.len(), 1);
+            assert_eq!(matched[0].name, "1.txt");
+
+            let matched = pz.list_detailed_matching("*");
+            assert_eq!(matched.len(), 2);
+
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test `download_matching` with glob patterns
+    async fn test_download_matching() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+            let results = pz.download_matching("1.*")?;
+            assert_eq!(results.len(), 1);
+            assert_eq!(results[0].0, "1.txt");
+            assert_eq!(results[0].1, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test `download_matching_to_dir` with glob patterns
+    async fn test_download_matching_to_dir() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+            let temp_dir = tempfile::tempdir()?;
+            let bytes = pz.download_matching_to_dir("*.txt", temp_dir.path())?;
+            assert_eq!(bytes, 10); // 5 bytes each
+            assert!(temp_dir.path().join("1.txt").exists());
+            assert!(temp_dir.path().join("2.txt").exists());
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test parallel download of multiple files
+    async fn test_download_multiple_parallel() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+            let results = pz.download_multiple_parallel(&["1.txt", "2.txt"], 2)?;
+
+            assert_eq!(results.len(), 2);
+            // Files may come back in different order due to parallelism
+            let mut sorted = results;
+            sorted.sort_by(|a, b| a.0.cmp(&b.0));
+            assert_eq!(sorted[0].0, "1.txt");
+            assert_eq!(sorted[0].1, vec![0x41, 0x41, 0x41, 0x41, 0xa]);
+            assert_eq!(sorted[1].0, "2.txt");
+            assert_eq!(sorted[1].1, vec![0x42, 0x42, 0x42, 0x42, 0xa]);
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test parallel download to a directory
+    async fn test_download_multiple_to_dir_parallel() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+            let temp_dir = tempfile::tempdir()?;
+            let total_bytes =
+                pz.download_multiple_to_dir_parallel(&["1.txt", "2.txt"], temp_dir.path(), 2)?;
+
+            assert_eq!(total_bytes, 10);
+            assert_eq!(
+                std::fs::read(temp_dir.path().join("1.txt"))?,
+                vec![0x41, 0x41, 0x41, 0x41, 0xa]
+            );
+            assert_eq!(
+                std::fs::read(temp_dir.path().join("2.txt"))?,
+                vec![0x42, 0x42, 0x42, 0x42, 0xa]
+            );
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test parallel download with empty file list
+    async fn test_download_multiple_parallel_empty() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let pz = PartialZip::new(address.join("/files/test.zip")?.as_str())?;
+            let results = pz.download_multiple_parallel(&[], 4)?;
+            assert!(results.is_empty());
+            Ok(())
+        })
+        .await?
+    }
+
+    #[tokio::test]
+    /// Test that `options()` getter returns the stored options
+    async fn test_options_getter() -> Result<()> {
+        let address = spawn_server()?.address;
+        tokio::task::spawn_blocking(move || {
+            let opts = PartialZipOptions::new().max_retries(5).max_redirects(3);
+            let pz =
+                PartialZip::new_with_options(address.join("/files/test.zip")?.as_str(), &opts)?;
+            assert_eq!(pz.options().max_retries, 5);
+            assert_eq!(pz.options().max_redirects, 3);
             Ok(())
         })
         .await?
