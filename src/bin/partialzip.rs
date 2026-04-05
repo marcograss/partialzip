@@ -9,21 +9,51 @@ use std::time::Duration;
 use url::Url;
 
 /// Handler to list the files from command line
-fn list(url: &str, detailed: bool, options: &PartialZipOptions) -> Result<()> {
+fn list(
+    url: &str,
+    detailed: bool,
+    json: bool,
+    filter: Option<&str>,
+    options: &PartialZipOptions,
+) -> Result<()> {
     let url = Url::parse(url).context("invalid URL for listing")?;
     let pz = PartialZip::new_with_options(url.as_str(), options)
         .context("Cannot create PartialZip instance for listing")?;
     if detailed {
-        pz.list_detailed().into_iter().for_each(|f| {
+        let files = filter.map_or_else(
+            || pz.list_detailed(),
+            |pattern| pz.list_detailed_matching(pattern),
+        );
+        if json {
             println!(
-                "{} - {} - Supported: {}",
-                f.name,
-                ByteSize(f.compressed_size),
-                f.supported
+                "{}",
+                serde_json::to_string_pretty(&files).context("JSON serialization failed")?
             );
-        });
+        } else {
+            for f in files {
+                println!(
+                    "{} - {} - Supported: {}",
+                    f.name,
+                    ByteSize(f.compressed_size),
+                    f.supported
+                );
+            }
+        }
     } else {
-        pz.list_names().into_iter().for_each(|f| println!("{f}"));
+        let names = filter.map_or_else(
+            || pz.list_names(),
+            |pattern| pz.list_names_matching(pattern),
+        );
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&names).context("JSON serialization failed")?
+            );
+        } else {
+            for name in names {
+                println!("{name}");
+            }
+        }
     }
     Ok(())
 }
@@ -97,6 +127,12 @@ enum Commands {
         /// list file size and support not only names
         #[arg(short = 'd', long)]
         detailed: bool,
+        /// output as JSON
+        #[arg(short = 'j', long)]
+        json: bool,
+        /// filter filenames by glob pattern (e.g., "*.txt", "kernel*")
+        #[arg(short = 'f', long)]
+        filter: Option<String>,
         /// url of the zip file
         url: String,
     },
@@ -138,7 +174,12 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Commands::List { detailed, url } => list(&url, detailed, &options),
+        Commands::List {
+            detailed,
+            json,
+            filter,
+            url,
+        } => list(&url, detailed, json, filter.as_deref(), &options),
         Commands::Download {
             url,
             filename,
