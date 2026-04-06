@@ -354,7 +354,8 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let mut content: Vec<u8> = Vec::new();
+        let size = self.archive.borrow_mut().by_name(filename)?.size() as usize;
+        let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write(filename, &mut content)?;
         Ok(content)
     }
@@ -420,7 +421,8 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
     pub fn download_with_progressbar(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let mut content: Vec<u8> = Vec::new();
+        let size = self.archive.borrow_mut().by_name(filename)?.size() as usize;
+        let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write_with_progressbar(filename, &mut content)?;
         Ok(content)
     }
@@ -931,12 +933,16 @@ impl io::Read for PartialReader {
                 std::thread::sleep(delay);
             }
 
-            let mut content: Vec<u8> = Vec::new();
+            let mut written = 0;
             {
                 let mut transfer = self.easy.transfer();
                 transfer.write_function(|data| {
                     log::trace!("transferred {:x} bytes", data.len());
-                    content.extend_from_slice(data);
+                    let len = std::cmp::min(data.len(), buf.len() - written);
+                    if len > 0 {
+                        buf[written..written + len].copy_from_slice(&data[..len]);
+                        written += len;
+                    }
                     Ok(data.len())
                 })?;
 
@@ -950,7 +956,7 @@ impl io::Read for PartialReader {
                 }
             }
 
-            let n = io::Read::read(&mut content.as_slice(), buf)?;
+            let n = written;
             // new position = position + read amount;
             self.pos = self.pos.checked_add(n as u64).ok_or_else(|| {
                 std::io::Error::new(
