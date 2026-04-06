@@ -354,7 +354,9 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let mut content: Vec<u8> = Vec::new();
+        let size = usize::try_from(self.archive.borrow_mut().by_name(filename)?.size())
+            .unwrap_or(usize::MAX);
+        let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write(filename, &mut content)?;
         Ok(content)
     }
@@ -420,7 +422,9 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
     pub fn download_with_progressbar(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let mut content: Vec<u8> = Vec::new();
+        let size = usize::try_from(self.archive.borrow_mut().by_name(filename)?.size())
+            .unwrap_or(usize::MAX);
+        let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write_with_progressbar(filename, &mut content)?;
         Ok(content)
     }
@@ -861,6 +865,7 @@ impl PartialReader {
 }
 
 impl io::Read for PartialReader {
+    #[allow(clippy::too_many_lines)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
         log::trace!(
@@ -931,12 +936,24 @@ impl io::Read for PartialReader {
                 std::thread::sleep(delay);
             }
 
-            let mut content: Vec<u8> = Vec::new();
+            let mut written = 0;
             {
                 let mut transfer = self.easy.transfer();
                 transfer.write_function(|data| {
                     log::trace!("transferred {:x} bytes", data.len());
-                    content.extend_from_slice(data);
+                    let remaining = buf.len().saturating_sub(written);
+                    if data.len() > remaining {
+                        log::warn!(
+                            "Received {} bytes but only {} bytes remain in destination buffer; aborting transfer",
+                            data.len(),
+                            remaining
+                        );
+                        return Ok(0);
+                    }
+                    if !data.is_empty() {
+                        buf[written..written + data.len()].copy_from_slice(data);
+                        written += data.len();
+                    }
                     Ok(data.len())
                 })?;
 
@@ -950,7 +967,7 @@ impl io::Read for PartialReader {
                 }
             }
 
-            let n = io::Read::read(&mut content.as_slice(), buf)?;
+            let n = written;
             // new position = position + read amount;
             self.pos = self.pos.checked_add(n as u64).ok_or_else(|| {
                 std::io::Error::new(
