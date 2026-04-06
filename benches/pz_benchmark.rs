@@ -8,17 +8,16 @@ use zip::ZipWriter;
 fn setup_large_zip() -> tempfile::NamedTempFile {
     let file = tempfile::NamedTempFile::new().unwrap();
     let mut zip = ZipWriter::new(file.reopen().unwrap());
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
     zip.start_file("large.bin", options).unwrap();
 
     // Generate 10 MB of high-entropy data to ensure the compressed file is large
     let mut data = vec![0u8; 1024 * 1024]; // 1 MB buffer
-    let mut seed = 0x12345678u32;
+    let mut seed = 0x1234_5678_u32;
     for _ in 0..10 {
         for byte in &mut data {
-            seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             *byte = (seed >> 24) as u8;
         }
         zip.write_all(&data).unwrap();
@@ -31,8 +30,8 @@ fn setup_large_zip() -> tempfile::NamedTempFile {
 /// # Panics
 /// Can panic while creating the `PartialZip` archive
 pub fn criterion_benchmark(c: &mut Criterion) {
-    use std::path::PathBuf;
     use partialzip::partzip::PartialZip;
+    use std::path::PathBuf;
 
     c.bench_function("local file benchmark detailed list", |b| {
         b.iter(|| {
@@ -67,8 +66,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("local file benchmark large download", |b| {
         let large_zip_path = setup_large_zip();
         b.iter(|| {
-            let pz = PartialZip::new(&format!("file://localhost{}", large_zip_path.path().display()))
-                .expect("cannot create PartialZip in benchmark download");
+            let pz = PartialZip::new(&format!(
+                "file://localhost{}",
+                large_zip_path.path().display()
+            ))
+            .expect("cannot create PartialZip in benchmark download");
             let _download = pz.download("large.bin");
         });
     });

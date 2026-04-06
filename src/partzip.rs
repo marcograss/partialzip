@@ -354,7 +354,8 @@ impl PartialZip {
     /// # Errors
     /// Will return a [`PartialZipError`] depending on what happened
     pub fn download(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let size = self.archive.borrow_mut().by_name(filename)?.size() as usize;
+        let size = usize::try_from(self.archive.borrow_mut().by_name(filename)?.size())
+            .unwrap_or(usize::MAX);
         let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write(filename, &mut content)?;
         Ok(content)
@@ -421,7 +422,8 @@ impl PartialZip {
     /// Will return a [`PartialZipError`] depending on what happened
     #[cfg(feature = "progressbar")]
     pub fn download_with_progressbar(&self, filename: &str) -> Result<Vec<u8>, PartialZipError> {
-        let size = self.archive.borrow_mut().by_name(filename)?.size() as usize;
+        let size = usize::try_from(self.archive.borrow_mut().by_name(filename)?.size())
+            .unwrap_or(usize::MAX);
         let mut content: Vec<u8> = Vec::with_capacity(size);
         self.download_to_write_with_progressbar(filename, &mut content)?;
         Ok(content)
@@ -938,10 +940,18 @@ impl io::Read for PartialReader {
                 let mut transfer = self.easy.transfer();
                 transfer.write_function(|data| {
                     log::trace!("transferred {:x} bytes", data.len());
-                    let len = std::cmp::min(data.len(), buf.len() - written);
-                    if len > 0 {
-                        buf[written..written + len].copy_from_slice(&data[..len]);
-                        written += len;
+                    let remaining = buf.len().saturating_sub(written);
+                    if data.len() > remaining {
+                        log::warn!(
+                            "Received {} bytes but only {} bytes remain in destination buffer; aborting transfer",
+                            data.len(),
+                            remaining
+                        );
+                        return Ok(0);
+                    }
+                    if !data.is_empty() {
+                        buf[written..written + data.len()].copy_from_slice(data);
+                        written += data.len();
                     }
                     Ok(data.len())
                 })?;
