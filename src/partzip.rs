@@ -865,6 +865,7 @@ impl PartialReader {
 }
 
 impl io::Read for PartialReader {
+    #[allow(clippy::too_many_lines)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
         log::trace!(
